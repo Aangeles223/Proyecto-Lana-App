@@ -1,0 +1,170 @@
+import React from "react";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import {
+  Ionicons,
+  FontAwesome5,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+
+export default function AgregarDineroConfirmarScreen({ navigation, route }) {
+  const { monto, metodo, icon, extra } = route.params;
+
+  const handleConfirmar = async () => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Depósito exitoso",
+        body: `Se depositaron $${monto} a tu cuenta.`,
+        sound: true,
+      },
+      trigger: null,
+    });
+    navigation.replace("MainTabs", { screen: "Menu" });
+  };
+
+  let MetodoIcon = null;
+  if (icon === "cc-visa")
+    MetodoIcon = <FontAwesome5 name="cc-visa" size={32} color="#1976d2" />;
+  if (icon === "bank-transfer")
+    MetodoIcon = (
+      <MaterialCommunityIcons name="bank-transfer" size={32} color="#388e3c" />
+    );
+  if (icon === "cash")
+    MetodoIcon = (
+      <MaterialCommunityIcons name="cash" size={32} color="#388e3c" />
+    );
+  if (icon === "dots-horizontal")
+    MetodoIcon = (
+      <MaterialCommunityIcons name="dots-horizontal" size={32} color="#888" />
+    );
+
+  return (
+    <View style={styles.background}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#222" />
+        </TouchableOpacity>
+        <Image
+          source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
+          style={styles.logo}
+        />
+      </View>
+      {/* Contenido centrado */}
+      <View style={styles.centerContent}>
+        <Text style={styles.title}>Agregar dinero</Text>
+        <Text style={styles.monto}>${monto}</Text>
+        <Text style={styles.confirmar}>Confirmar Pago</Text>
+        <Text style={styles.label}>Metodo de pago</Text>
+        <View style={styles.metodoRow}>
+          {MetodoIcon}
+          <Text style={styles.metodoText}>
+            {metodo} {extra ? <Text style={styles.extra}>{extra}</Text> : null}
+          </Text>
+        </View>
+      </View>
+      {/* Botón Confirmar y Salir abajo */}
+      <View style={styles.bottomArea}>
+        <TouchableOpacity style={styles.button} onPress={handleConfirmar}>
+          <Text style={styles.buttonText}>Confirmar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={() => navigation.replace("Login")}
+        >
+          <Text style={styles.logoutText}>Salir</Text>
+          <Ionicons
+            name="arrow-forward"
+            size={28}
+            color="red"
+            style={{ marginLeft: 8 }}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: "#faf7f7",
+    paddingTop: 30,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 18,
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  logo: { width: 90, height: 30, resizeMode: "contain", marginLeft: 60 },
+  centerContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -40,
+  },
+  title: {
+    fontSize: 28,
+    color: "#222",
+    fontFamily: "serif",
+    textAlign: "center",
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  monto: {
+    fontSize: 48,
+    color: "#222",
+    fontFamily: "serif",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  confirmar: {
+    fontSize: 22,
+    color: "#222",
+    fontFamily: "serif",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  label: {
+    fontSize: 18,
+    color: "#222",
+    fontFamily: "serif",
+    marginTop: 30,
+    textAlign: "center",
+  },
+  metodoRow: { flexDirection: "row", alignItems: "center", marginTop: 10 },
+  metodoText: {
+    fontSize: 22,
+    fontFamily: "serif",
+    color: "#222",
+    marginLeft: 10,
+  },
+  extra: { fontSize: 18, color: "#222", fontFamily: "serif", marginLeft: 8 },
+  bottomArea: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: "#54bcd4",
+    borderRadius: 8,
+    paddingVertical: 12,
+    width: 260,
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  buttonText: { color: "#222", fontSize: 18, fontFamily: "serif" },
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 0,
+  },
+  logoutText: {
+    color: "red",
+    fontSize: 22,
+    fontFamily: "serif",
+    marginRight: 4,
+  },
+});

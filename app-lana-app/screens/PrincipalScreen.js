@@ -115,17 +115,6 @@ export default function PrincipalScreen() {
           </View>
         </ScrollView>
       </View>
-      {/* Barra inferior */}
-      <LinearGradient
-        colors={["#7fd8f7", "#e0f7fa"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.bottomNav}
-      >
-        <Feather name="home" size={28} color="#222" />
-        <Feather name="pie-chart" size={28} color="#222" />
-        <Feather name="menu" size={28} color="#222" />
-      </LinearGradient>
     </LinearGradient>
   );
 }
