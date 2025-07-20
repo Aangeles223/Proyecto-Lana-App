@@ -12,6 +12,14 @@ import PerfilScreen from "./screens/PerfilScreen";
 import DineroMontoScreen from "./screens/DineroMontoScreen";
 import DineroMetodoScreen from "./screens/DineroMetodoScreen";
 import DineroConfirmarScreen from "./screens/DineroConfirmarScreen";
+import AgregarTransaccionScreen from "./screens/AgregarTransaccionesScreen";
+import PresupuestosScreen from "./screens/PresupuestoScreen";
+import CrearPresupuestoScreen from "./screens/CrearPresupuestoScreen";
+import EditarPresupuestoScreen from "./screens/EditarPresupuestoScreen";
+import ReporteGastosScreen from "./screens/ReporteGastosScreen";
+import PagosFijosScreen from "./screens/PagosFijosScreen";
+import AgregarNuevoPagoScreen from "./screens/AgregarNuevoPagoScreen";
+import EditarPagoFijoScreen from "./screens/EditarPagoFijoScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -67,7 +75,27 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Perfil" component={PerfilScreen} />
+        <Stack.Screen name="Presupuesto" component={PresupuestosScreen} />
+        <Stack.Screen name="PagosFijos" component={PagosFijosScreen} />
+        <Stack.Screen
+          name="AgregarNuevoPago"
+          component={AgregarNuevoPagoScreen}
+        />
+        <Stack.Screen name="EditarPagoFijo" component={EditarPagoFijoScreen} />
+        <Stack.Screen name="ReporteGastos" component={ReporteGastosScreen} />
+        <Stack.Screen
+          name="EditarPresupuesto"
+          component={EditarPresupuestoScreen}
+        />
+        <Stack.Screen
+          name="CrearPresupuesto"
+          component={CrearPresupuestoScreen}
+        />
         <Stack.Screen name="AgregarDineroMonto" component={DineroMontoScreen} />
+        <Stack.Screen
+          name="AgregarTransacciones"
+          component={AgregarTransaccionScreen}
+        />
         <Stack.Screen
           name="AgregarDineroMetodo"
           component={DineroMetodoScreen}

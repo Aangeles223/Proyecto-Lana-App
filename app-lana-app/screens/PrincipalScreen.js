@@ -15,7 +15,7 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 
-export default function PrincipalScreen() {
+export default function PrincipalScreen({ navigation }) {
   return (
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>
       {/* Header */}
@@ -46,19 +46,31 @@ export default function PrincipalScreen() {
         <Text style={styles.saldo}>$3,800.00</Text>
         {/* Acciones rápidas */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate("AgregarTransacciones")}
+          >
             <Feather name="plus-circle" size={28} color="#222" />
             <Text style={styles.actionText}>Agregar{"\n"}Transacciones</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate("Presupuesto")}
+          >
             <FontAwesome5 name="piggy-bank" size={24} color="#222" />
             <Text style={styles.actionText}>Presupuesto</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate("ReporteGastos")}
+          >
             <FontAwesome5 name="chart-bar" size={24} color="#222" />
             <Text style={styles.actionText}>Reporte{"\n"}de gastos</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate("PagosFijos")}
+          >
             <Feather name="calendar" size={24} color="#222" />
             <Text style={styles.actionText}>Pagos{"\n"}fijos</Text>
           </TouchableOpacity>
