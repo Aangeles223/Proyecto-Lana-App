@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
+  image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart, LineChart } from "react-native-chart-kit";
+import LogoLana from "../components/LogoLana";
 
 // Ejemplo de registros (puedes importar o compartir el array real)
 const transaccionesPorMes = {
@@ -73,19 +75,19 @@ export default function ReporteGastosScreen({ navigation }) {
   return (
     <View style={styles.background}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#222" />
-        </TouchableOpacity>
-        <Image
-          source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-          style={styles.logo}
-        />
-        <Ionicons
-          name="notifications-outline"
-          size={28}
-          color="#222"
-          style={{ marginLeft: "auto" }}
-        />
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 2, alignItems: "center" }}>
+          <LogoLana />
+        </View>
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          <TouchableOpacity>
+            <Ionicons name="notifications-outline" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Control de Gastos</Text>
@@ -220,7 +222,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-  logo: { width: 90, height: 30, resizeMode: "contain", marginLeft: 60 },
   scrollContent: {
     alignItems: "center",
     paddingBottom: 40,

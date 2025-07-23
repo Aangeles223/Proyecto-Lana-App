@@ -7,17 +7,17 @@ import {
   Feather,
 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import LogoLana from "../components/LogoLana";
 
-export default function MenuScreen({ navigation }) {
+export default function MenuScreen({ navigation, onLogout }) {
   return (
     <LinearGradient colors={["#fff", "#faf7f7"]} style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.headerRow}>
         {/* Flecha eliminada */}
-        <Image
-          source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-          style={styles.logo}
-        />
+        <View style={styles.logoContainer}>
+          <LogoLana />
+        </View>
       </View>
       <Text style={styles.title}>Menú</Text>
       {/* Opciones */}
@@ -68,7 +68,10 @@ export default function MenuScreen({ navigation }) {
       {/* Botón Salir */}
       <TouchableOpacity
         style={styles.logoutBtn}
-        onPress={() => navigation.replace("Login")}
+        onPress={() => {
+          onLogout();
+          navigation.navigate("Principal"); // Esto fuerza el tab a refrescar
+        }}
       >
         <Text style={styles.logoutText}>Salir</Text>
         <Ionicons
@@ -90,11 +93,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 16,
     justifyContent: "center", // Centra el logo
-  },
-  logo: {
-    width: 90,
-    height: 40,
-    resizeMode: "contain",
   },
   title: {
     fontSize: 38,

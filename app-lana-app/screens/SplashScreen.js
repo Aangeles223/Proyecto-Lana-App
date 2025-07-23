@@ -1,18 +1,11 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import LogoLana from "../components/LogoLana";
 
-export default function SplashScreen({ navigation }) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.replace("Register"); // transición automática
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
+export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Lana App</Text>
+      <LogoLana />
     </View>
   );
 }
@@ -23,10 +16,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#64C7D0",
     justifyContent: "center",
     alignItems: "center",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#333",
   },
 });

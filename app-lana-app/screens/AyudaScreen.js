@@ -2,21 +2,24 @@ import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import LogoLana from "../components/LogoLana";
 
 export default function AyudaScreen() {
   return (
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-            style={styles.logo}
-          />
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          {/* Si quieres un botón atrás, ponlo aquí. Si no, deja vacío */}
         </View>
-        <TouchableOpacity style={styles.bellContainer}>
-          <Ionicons name="notifications-outline" size={28} color="#222" />
-        </TouchableOpacity>
+        <View style={{ flex: 2, alignItems: "center" }}>
+          <LogoLana />
+        </View>
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          <TouchableOpacity style={styles.bellContainer}>
+            <Ionicons name="notifications-outline" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
       </View>
       {/* Card */}
       <View style={styles.card}>
@@ -40,17 +43,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 24,
     backgroundColor: "transparent",
-    justifyContent: "space-between",
-  },
-  logoContainer: {
-    flex: 1,
-    alignItems: "flex-start",
-  },
-  logo: {
-    width: 90,
-    height: 40,
-    resizeMode: "contain",
-    marginTop: 10,
+    justifyContent: "center",
   },
   bellContainer: {
     alignItems: "flex-end",

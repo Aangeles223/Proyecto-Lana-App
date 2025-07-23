@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import LogoLana from "../components/LogoLana";
 import {
   Feather,
   FontAwesome5,
@@ -20,25 +21,15 @@ export default function PrincipalScreen({ navigation }) {
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <Image
-          source={{
-            uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          }}
-          style={styles.avatar}
-        />
+        <View style={{ flex: 1 }} />
         <Text style={styles.bienvenida}>Bienvenido, Juan</Text>
         <TouchableOpacity style={styles.bellContainer}>
           <Ionicons name="notifications-outline" size={28} color="#222" />
         </TouchableOpacity>
       </View>
-      {/* Logo */}
+      {/* Logo centrado */}
       <View style={styles.logoContainer}>
-        <Image
-          source={{
-            uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png",
-          }}
-          style={styles.logo}
-        />
+        <LogoLana />
       </View>
       {/* Card principal */}
       <View style={styles.card}>
@@ -137,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 40,
     marginHorizontal: 20,
-    justifyContent: "space-between",
+    justifyContent: "center",
   },
   avatar: {
     width: 48,
@@ -147,25 +138,14 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
   bienvenida: {
-    flex: 1,
+    flex: 2,
     textAlign: "center",
-    fontSize: 18,
+    fontSize: 22,
     color: "#222",
-    fontWeight: "600",
-    marginLeft: -48,
+    fontWeight: "700",
   },
   bellContainer: {
     marginLeft: 10,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginTop: 5,
-    marginBottom: 10,
-  },
-  logo: {
-    width: 110,
-    height: 40,
-    resizeMode: "contain",
   },
   card: {
     flex: 1,

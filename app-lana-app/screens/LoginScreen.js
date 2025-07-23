@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
+import LogoLana from "../components/LogoLana";
 
 const { width, height } = Dimensions.get("window");
 
@@ -24,10 +25,11 @@ export default function LoginScreen({ navigation }) {
   const validEmail = "usuario@lana.com";
   const validPassword = "123456";
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (email === validEmail && password === validPassword) {
       setError("");
-      navigation.navigate("MainTabs", {
+      await AsyncStorage.setItem("isLoggedIn", "true");
+      navigation.replace("MainTabs", {
         screen: "Principal",
         params: { email },
       });
@@ -48,6 +50,9 @@ export default function LoginScreen({ navigation }) {
         >
           <Text style={styles.title}>Iniciar Sesión</Text>
           <View style={styles.centerContainer}>
+            <View style={styles.logoContainer}>
+              <LogoLana />
+            </View>
             <View style={styles.cardWrapper}>
               {/* Avatar en círculo blanco */}
               <View style={styles.avatarModal}>

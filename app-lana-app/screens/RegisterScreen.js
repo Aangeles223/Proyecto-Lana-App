@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import LogoLana from "../components/LogoLana";
 import { FontAwesome, MaterialIcons, Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
@@ -17,20 +18,11 @@ export default function RegisterScreen({ navigation }) {
   return (
     <LinearGradient colors={["#7fd8f7", "#185a9d"]} style={styles.background}>
       <Text style={styles.title}>Registro</Text>
-      <Image
-        source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-        style={styles.logo}
-      />
+      <View style={styles.logoContainer}>
+        <LogoLana />
+      </View>
       <View style={styles.cardWrapper}>
         {/* Avatar modal */}
-        <View style={styles.avatarModal}>
-          <Image
-            source={{
-              uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-            }}
-            style={styles.avatar}
-          />
-        </View>
         <View style={styles.card}>
           <View style={styles.inputBox}>
             <TextInput
@@ -108,14 +100,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 2,
     fontWeight: "bold",
-  },
-  logo: {
-    width: 90,
-    height: 30,
-    resizeMode: "contain",
-    alignSelf: "center",
-    marginBottom: 10,
-    marginTop: 5,
   },
   cardWrapper: {
     width: width > 400 ? 350 : "90%",

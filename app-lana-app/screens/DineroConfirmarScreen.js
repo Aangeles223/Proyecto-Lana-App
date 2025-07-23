@@ -6,6 +6,7 @@ import {
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
+import LogoLana from "../components/LogoLana";
 
 export default function AgregarDineroConfirmarScreen({ navigation, route }) {
   const { monto, metodo, icon, extra } = route.params;
@@ -41,13 +42,17 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
   return (
     <View style={styles.background}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#222" />
-        </TouchableOpacity>
-        <Image
-          source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-          style={styles.logo}
-        />
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 2, alignItems: "center" }}>
+          <LogoLana />
+        </View>
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          {/* Si quieres una campana aquí, agrégala. Si no, deja vacío */}
+        </View>
       </View>
       {/* Contenido centrado */}
       <View style={styles.centerContent}>
@@ -98,7 +103,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-  logo: { width: 90, height: 30, resizeMode: "contain", marginLeft: 60 },
   centerContent: {
     flex: 1,
     alignItems: "center",

@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import LogoLana from "../components/LogoLana";
 
 export default function CrearPresupuestoScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
@@ -26,6 +28,10 @@ export default function CrearPresupuestoScreen({ navigation }) {
 
   return (
     <View style={styles.background}>
+      {/* Logo centrado */}
+      <View style={styles.logoContainer}>
+        <LogoLana />
+      </View>
       <View style={styles.centerContent}>
         <Text style={styles.title}>Crear presupuesto</Text>
         <TextInput

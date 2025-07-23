@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import LogoLana from "../components/LogoLana";
 
 export default function AgregarDineroMontoScreen({ navigation }) {
   const [monto, setMonto] = useState("");
@@ -15,13 +16,15 @@ export default function AgregarDineroMontoScreen({ navigation }) {
   return (
     <View style={styles.background}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#222" />
-        </TouchableOpacity>
-        <Image
-          source={{ uri: "https://i.ibb.co/3Nw2yQk/lana-app-logo.png" }}
-          style={styles.logo}
-        />
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 2, alignItems: "center" }}>
+          <LogoLana />
+        </View>
+        <View style={{ flex: 1 }} />
       </View>
       {/* Contenido centrado */}
       <View style={styles.centerContent}>
@@ -76,7 +79,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginBottom: 10,
   },
-  logo: { width: 90, height: 30, resizeMode: "contain", marginLeft: 60 },
   centerContent: {
     flex: 1,
     alignItems: "center",

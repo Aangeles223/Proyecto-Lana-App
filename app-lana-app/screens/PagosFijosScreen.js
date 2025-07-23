@@ -6,7 +6,9 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
+  Image,
 } from "react-native";
+import LogoLana from "../components/LogoLana";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 
 const pagosEjemplo = [
@@ -50,16 +52,19 @@ export default function PagosFijosScreen({ navigation }) {
   return (
     <View style={styles.background}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#222" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lana App</Text>
-        <Ionicons
-          name="notifications-outline"
-          size={28}
-          color="#222"
-          style={{ marginLeft: "auto" }}
-        />
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 2, alignItems: "center" }}>
+          <LogoLana />
+        </View>
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          <TouchableOpacity>
+            <Ionicons name="notifications-outline" size={28} color="#222" />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.topCard}>
         <Text style={styles.title}>Pagos fijos</Text>
