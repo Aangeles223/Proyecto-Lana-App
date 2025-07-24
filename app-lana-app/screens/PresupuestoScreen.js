@@ -1,22 +1,37 @@
-import React from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
-
-const presupuestosEjemplo = [
-  { nombre: "Comida", monto: 1500, gastado: 322, icon: "ios-restaurant" },
-  { nombre: "Escuela", monto: 6000, gastado: 4422, icon: "ios-school" },
-  { nombre: "Transporte", monto: 1000, gastado: 122, icon: "ios-bus" },
-];
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PresupuestosScreen({ navigation }) {
+  const [presupuestos, setPresupuestos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPresupuestos = useCallback(async () => {
+    setLoading(true);
+    const userStr = await AsyncStorage.getItem("user");
+    const user = JSON.parse(userStr);
+    const res = await fetch(`http://10.0.0.11:3000/presupuestos/${user.id}`);
+    const data = await res.json();
+    if (data.success) setPresupuestos(data.presupuestos);
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPresupuestos();
+    }, [fetchPresupuestos])
+  );
+
   return (
     <View style={styles.background}>
       <View style={styles.headerRow}>
@@ -37,50 +52,68 @@ export default function PresupuestosScreen({ navigation }) {
       {/* Contenido centrado */}
       <View style={styles.centerContent}>
         <Text style={styles.title}>Presupuesto mensual</Text>
-        <ScrollView
-          style={{ width: "100%" }}
-          contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {presupuestosEjemplo.map((p, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.presupuestoCard}
-              onPress={() =>
-                navigation.navigate("EditarPresupuesto", { presupuesto: p })
-              }
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={p.icon}
-                size={32}
-                color="#1976d2"
-                style={{ marginRight: 10 }}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nombre}>{p.nombre}</Text>
-                <Text style={styles.monto}>
-                  <Text style={{ color: "#1976d2" }}>
-                    Presupuesto: ${p.monto}
+        {loading ? (
+          <ActivityIndicator size="large" color="#1976d2" />
+        ) : (
+          <ScrollView
+            style={{ width: "100%" }}
+            contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {presupuestos.map((p, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.presupuestoCard}
+                onPress={() =>
+                  navigation.navigate("EditarPresupuesto", { presupuesto: p })
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="ios-wallet"
+                  size={32}
+                  color="#1976d2"
+                  style={{ marginRight: 10 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nombre}>{p.categoria}</Text>
+                  <Text style={styles.monto}>
+                    <Text style={{ color: "#1976d2" }}>
+                      Presupuesto: ${p.monto_mensual}
+                    </Text>
                   </Text>
-                </Text>
-                <Text style={styles.gastado}>
-                  <Text style={{ color: "#43a047" }}>
-                    Gastado: ${p.gastado}
+                  <Text style={styles.gastado}>
+                    <Text style={{ color: "#43a047" }}>
+                      Gastado: ${p.gastado}
+                    </Text>
                   </Text>
-                </Text>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progress,
-                      { width: `${(p.gastado / p.monto) * 100}%` },
-                    ]}
-                  />
+                  <Text style={styles.fecha}>{`Mes: ${p.mes}/${p.anio}`}</Text>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progress,
+                        {
+                          width: `${
+                            p.monto_mensual > 0
+                              ? Math.min(
+                                  (p.gastado / p.monto_mensual) * 100,
+                                  100
+                                )
+                              : 0
+                          }%`,
+                          backgroundColor:
+                            p.gastado >= p.monto_mensual
+                              ? "#d32f2f"
+                              : "#1976d2",
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
       {/* Botón abajo */}
       <View style={styles.bottomArea}>
@@ -140,6 +173,7 @@ const styles = StyleSheet.create({
   nombre: { fontSize: 20, fontFamily: "serif", color: "#222", marginBottom: 2 },
   monto: { fontSize: 16, fontFamily: "serif", marginBottom: 2 },
   gastado: { fontSize: 16, fontFamily: "serif", marginBottom: 6 },
+  fecha: { fontSize: 14, fontFamily: "serif", color: "#666" },
   progressBar: {
     height: 8,
     backgroundColor: "#e0e0e0",

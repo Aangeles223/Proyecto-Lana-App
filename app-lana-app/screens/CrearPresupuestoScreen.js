@@ -1,107 +1,125 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  ScrollView,
   Platform,
-  Image,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoLana from "../components/LogoLana";
 
 export default function CrearPresupuestoScreen({ navigation }) {
-  const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
-  const [fechaInicio, setFechaInicio] = useState(new Date());
-  const [fechaFin, setFechaFin] = useState(new Date());
-  const [showInicio, setShowInicio] = useState(false);
-  const [showFin, setShowFin] = useState(false);
-  const [recurrencia, setRecurrencia] = useState("Cada dos semanas");
+  const [categorias, setCategorias] = useState([]);
+  const [categoria, setCategoria] = useState(null);
+  const [periodo, setPeriodo] = useState("mensual");
 
-  const handleGuardar = () => {
-    // Aquí puedes guardar el presupuesto en la BD o en estado global
-    navigation.goBack();
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      const res = await fetch("http://10.0.0.11:3000/categorias");
+      const data = await res.json();
+      if (data.success) {
+        setCategorias(data.categorias);
+        if (data.categorias.length > 0) setCategoria(data.categorias[0].id);
+      }
+    };
+    fetchCategorias();
+  }, []);
+
+  const handleAgregar = async () => {
+    if (!monto || isNaN(Number(monto))) {
+      Alert.alert("Error", "Ingresa un monto válido.");
+      return;
+    }
+    const userStr = await AsyncStorage.getItem("user");
+    const user = JSON.parse(userStr);
+    const fecha = new Date();
+    let mes = fecha.getMonth() + 1;
+    let anio = fecha.getFullYear();
+
+    const res = await fetch("http://10.0.0.11:3000/presupuestos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        usuario_id: user.id,
+        categoria_id: categoria,
+        monto_mensual: Number(monto),
+        mes,
+        anio,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      navigation.goBack();
+    } else {
+      Alert.alert("Error", "No se pudo agregar el presupuesto.");
+    }
   };
 
   return (
-    <View style={styles.background}>
-      {/* Logo centrado */}
-      <View style={styles.logoContainer}>
-        <LogoLana />
-      </View>
-      <View style={styles.centerContent}>
-        <Text style={styles.title}>Crear presupuesto</Text>
-        <TextInput
-          style={styles.input}
-          value={nombre}
-          onChangeText={setNombre}
-          placeholder="Nombre"
-          placeholderTextColor="#bdbdbd"
-        />
-        <TextInput
-          style={styles.input}
-          value={monto}
-          onChangeText={setMonto}
-          placeholder="Monto"
-          placeholderTextColor="#bdbdbd"
-          keyboardType="numeric"
-        />
-        {/* Fecha de inicio */}
-        <TouchableOpacity
-          style={styles.selectRow}
-          onPress={() => setShowInicio(true)}
-        >
-          <Ionicons name="calendar" size={22} color="#1976d2" />
-          <Text style={styles.selectText}>
-            {fechaInicio.toLocaleDateString()}
-          </Text>
-        </TouchableOpacity>
-        {showInicio && (
-          <DateTimePicker
-            value={fechaInicio}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, selectedDate) => {
-              setShowInicio(false);
-              if (selectedDate) setFechaInicio(selectedDate);
-            }}
+    <KeyboardAvoidingView
+      style={styles.background}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={60}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.logoContainer}>
+          <LogoLana />
+        </View>
+        <View style={styles.centerContent}>
+          <Text style={styles.title}>Crear presupuesto</Text>
+          {/* Picker de Categoría */}
+          <Text style={styles.label}>Categoría</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={categoria}
+              style={styles.picker}
+              onValueChange={(itemValue) => setCategoria(itemValue)}
+            >
+              {categorias.map((cat) => (
+                <Picker.Item key={cat.id} label={cat.nombre} value={cat.id} />
+              ))}
+            </Picker>
+          </View>
+          {/* Monto */}
+          <Text style={styles.label}>Monto</Text>
+          <TextInput
+            style={styles.input}
+            value={monto}
+            onChangeText={setMonto}
+            placeholder="Monto"
+            placeholderTextColor="#bdbdbd"
+            keyboardType="numeric"
           />
-        )}
-        {/* Fecha de fin */}
-        <TouchableOpacity
-          style={styles.selectRow}
-          onPress={() => setShowFin(true)}
-        >
-          <Ionicons name="calendar" size={22} color="#1976d2" />
-          <Text style={styles.selectText}>{fechaFin.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-        {showFin && (
-          <DateTimePicker
-            value={fechaFin}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, selectedDate) => {
-              setShowFin(false);
-              if (selectedDate) setFechaFin(selectedDate);
-            }}
-          />
-        )}
-        {/* Recurrencia */}
-        <TouchableOpacity
-          style={styles.selectRow}
-          onPress={() => setRecurrencia("Cada dos semanas")}
-        >
-          <Ionicons name="repeat" size={22} color="#1976d2" />
-          <Text style={styles.selectText}>{recurrencia}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleGuardar}>
-          <Text style={styles.buttonText}>Guardar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          {/* Periodo */}
+          <Text style={styles.label}>Periodo</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={periodo}
+              style={styles.picker}
+              onValueChange={(itemValue) => setPeriodo(itemValue)}
+            >
+              <Picker.Item label="Mensual" value="mensual" />
+              <Picker.Item label="Quincenal" value="quincenal" />
+              <Picker.Item label="Semanal" value="semanal" />
+            </Picker>
+          </View>
+          {/* Botón Agregar */}
+          <TouchableOpacity style={styles.button} onPress={handleAgregar}>
+            <Text style={styles.buttonText}>Agregar</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -111,19 +129,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#faf7f7",
     paddingTop: 30,
   },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
   centerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: -40, // Ajusta si quieres más arriba o abajo
+    marginTop: -20,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     color: "#222",
     fontFamily: "serif",
     textAlign: "center",
     fontWeight: "bold",
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 18,
+    color: "#222",
+    fontFamily: "serif",
+    marginTop: 10,
+    marginBottom: 2,
+    alignSelf: "flex-start",
+    marginLeft: 10,
+  },
+  pickerContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1976d2",
+    marginBottom: 10,
+    width: 320,
+    alignSelf: "center",
+  },
+  picker: {
+    width: "100%",
+    color: "#222",
+    fontSize: 16,
+    backgroundColor: "#fff",
   },
   input: {
     fontSize: 22,
@@ -133,29 +179,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#222",
     borderRadius: 12,
-    width: 340,
+    width: 320,
     marginBottom: 18,
     backgroundColor: "#fff",
     paddingVertical: 12,
     paddingHorizontal: 18,
-  },
-  selectRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginVertical: 10,
-    width: 340,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  selectText: {
-    fontSize: 20,
-    color: "#222",
-    fontFamily: "serif",
-    marginLeft: 12,
   },
   button: {
     backgroundColor: "#54bcd4",

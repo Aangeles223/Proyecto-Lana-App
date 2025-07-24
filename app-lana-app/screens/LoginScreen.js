@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,27 +14,36 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, setIsLoggedIn }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const validEmail = "usuario@lana.com";
-  const validPassword = "123456";
-
   const handleLogin = async () => {
-    if (email === validEmail && password === validPassword) {
-      setError("");
-      await AsyncStorage.setItem("isLoggedIn", "true");
-      navigation.replace("MainTabs", {
-        screen: "Principal",
-        params: { email },
+    setError("");
+    try {
+      const response = await fetch("http://10.0.0.11:3000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          contrasena: password, // Debe coincidir con el backend
+        }),
       });
-    } else {
-      setError("Correo o contraseña incorrectos");
+      const data = await response.json();
+      if (data.success) {
+        await AsyncStorage.setItem("isLoggedIn", "true");
+        await AsyncStorage.setItem("user", JSON.stringify(data.user)); // Guarda el usuario
+        setIsLoggedIn(true);
+      } else {
+        setError(data.message || "Correo o contraseña incorrectos");
+      }
+    } catch (e) {
+      setError("Error de conexión con el servidor");
     }
   };
 
@@ -195,7 +204,7 @@ const styles = StyleSheet.create({
     color: "#222",
     borderWidth: 1,
     borderColor: "#b2e0f7",
-    paddingRight: 40, // espacio para el icono
+    paddingRight: 40,
   },
   inputIcon: {
     position: "absolute",

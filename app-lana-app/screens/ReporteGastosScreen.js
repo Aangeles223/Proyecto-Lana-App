@@ -1,42 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Dimensions,
   ScrollView,
-  image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PieChart, LineChart } from "react-native-chart-kit";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Ejemplo de registros (puedes importar o compartir el array real)
-const transaccionesPorMes = {
-  "2025-05": [
-    { categoria: "Comida", monto: 450 },
-    { categoria: "Compras", monto: 2000 },
-    { categoria: "Renta", monto: 5000 },
-    { categoria: "Transporte", monto: 122 },
-    { categoria: "Comida", monto: 322 },
-    { categoria: "Entretenimiento", monto: 1000 },
-  ],
-  "2025-04": [
-    { categoria: "Comida", monto: 300 },
-    { categoria: "Compras", monto: 1500 },
-    { categoria: "Renta", monto: 5000 },
-    { categoria: "Transporte", monto: 100 },
-    { categoria: "Entretenimiento", monto: 800 },
-  ],
-};
-
-const meses = [
-  { label: "Mayo 2025", value: "2025-05" },
-  { label: "Abril 2025", value: "2025-04" },
-];
-
+// Puedes ajustar los colores según tus categorías reales
 const coloresCategorias = {
   Comida: "#FFD700",
   Compras: "#FF0000",
@@ -46,31 +23,88 @@ const coloresCategorias = {
   Otros: "#888",
 };
 
+const meses = [
+  { label: "Enero", value: 1 },
+  { label: "Febrero", value: 2 },
+  { label: "Marzo", value: 3 },
+  { label: "Abril", value: 4 },
+  { label: "Mayo", value: 5 },
+  { label: "Junio", value: 6 },
+  { label: "Julio", value: 7 },
+  { label: "Agosto", value: 8 },
+  { label: "Septiembre", value: 9 },
+  { label: "Octubre", value: 10 },
+  { label: "Noviembre", value: 11 },
+  { label: "Diciembre", value: 12 },
+];
+
+const anioActual = new Date().getFullYear();
+
 export default function ReporteGastosScreen({ navigation }) {
-  const [mesSeleccionado, setMesSeleccionado] = useState(meses[0].value);
+  const [mesSeleccionado, setMesSeleccionado] = useState(
+    new Date().getMonth() + 1
+  );
+  const [anioSeleccionado, setAnioSeleccionado] = useState(anioActual);
+  const [reporte, setReporte] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Agrupa y suma por categoría
-  const datosMes = transaccionesPorMes[mesSeleccionado] || [];
-  const resumen = {};
-  datosMes.forEach((t) => {
-    resumen[t.categoria] = (resumen[t.categoria] || 0) + t.monto;
-  });
+  // Cargar datos reales de la BD
+  useEffect(() => {
+    const fetchReporte = async () => {
+      setLoading(true);
+      const userStr = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userStr);
+      const res = await fetch(
+        `http://10.0.0.11:3000/reporte/${user.id}/${anioSeleccionado}/${mesSeleccionado}`
+      );
+      const data = await res.json();
+      if (data.success) setReporte(data.reporte);
+      setLoading(false);
+    };
+    fetchReporte();
+  }, [mesSeleccionado, anioSeleccionado]);
 
-  const total = Object.values(resumen).reduce((a, b) => a + b, 0);
+  // Pie chart para egresos
+  const pieData = reporte
+    .filter((r) => r.egresos > 0)
+    .map((r) => ({
+      name: r.categoria,
+      amount: r.egresos,
+      color: coloresCategorias[r.categoria] || "#888",
+      legendFontColor: "#222",
+      legendFontSize: 14,
+    }));
 
-  // Pie chart data
-  const pieData = Object.keys(resumen).map((cat, i) => ({
-    name: cat,
-    amount: resumen[cat],
-    color: coloresCategorias[cat] || "#888",
-    legendFontColor: "#222",
-    legendFontSize: 14,
-  }));
+  // Pie chart para ingresos (opcional)
+  const pieDataIngresos = reporte
+    .filter((r) => r.ingresos > 0)
+    .map((r) => ({
+      name: r.categoria,
+      amount: r.ingresos,
+      color: coloresCategorias[r.categoria] || "#888",
+      legendFontColor: "#222",
+      legendFontSize: 14,
+    }));
 
-  // Simulación de ingresos/gastos para el gráfico de líneas
+  // Total ingresos y egresos
+  const totalIngresos = reporte.reduce((a, b) => a + (b.ingresos || 0), 0);
+  const totalEgresos = reporte.reduce((a, b) => a + (b.egresos || 0), 0);
+
+  // Simulación de datos semanales para el gráfico de líneas (puedes adaptar tu backend para esto)
   const lineLabels = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
-  const gastosLine = [total * 0.2, total * 0.4, total * 0.7, total];
-  const ingresosLine = [1000, 2000, 3000, 4000];
+  // Aquí deberías traer los datos reales por semana desde el backend
+  const gastosLine = [
+    totalEgresos * 0.2,
+    totalEgresos * 0.4,
+    totalEgresos * 0.7,
+    totalEgresos,
+  ];
+  const ingresosLine = [
+    totalIngresos * 0.2,
+    totalIngresos * 0.4,
+    totalIngresos * 0.7,
+    totalIngresos,
+  ];
 
   return (
     <View style={styles.background}>
@@ -91,85 +125,140 @@ export default function ReporteGastosScreen({ navigation }) {
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Control de Gastos</Text>
-        {/* Selector de mes */}
+        {/* Selector de año */}
         <View style={styles.mesesContainer}>
-          {meses.map((mes) => (
-            <TouchableOpacity
-              key={mes.value}
-              style={[
-                styles.mesBtn,
-                mesSeleccionado === mes.value && styles.mesBtnActivo,
-              ]}
-              onPress={() => setMesSeleccionado(mes.value)}
-            >
-              <Text
+          <TouchableOpacity
+            style={styles.mesBtn}
+            onPress={() => setAnioSeleccionado(anioSeleccionado - 1)}
+          >
+            <Text style={styles.mesBtnText}>{"<"}</Text>
+          </TouchableOpacity>
+          <Text
+            style={[
+              styles.mesBtnText,
+              { fontWeight: "bold", marginHorizontal: 10 },
+            ]}
+          >
+            {anioSeleccionado}
+          </Text>
+          <TouchableOpacity
+            style={styles.mesBtn}
+            onPress={() => setAnioSeleccionado(anioSeleccionado + 1)}
+          >
+            <Text style={styles.mesBtnText}>{">"}</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Selector de mes */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 10 }}
+        >
+          <View style={styles.mesesContainer}>
+            {meses.map((mes) => (
+              <TouchableOpacity
+                key={mes.value}
                 style={[
-                  styles.mesBtnText,
-                  mesSeleccionado === mes.value && styles.mesBtnTextActivo,
+                  styles.mesBtn,
+                  mesSeleccionado === mes.value && styles.mesBtnActivo,
                 ]}
+                onPress={() => setMesSeleccionado(mes.value)}
               >
-                {mes.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {/* Pie Chart */}
-        <PieChart
-          data={pieData}
-          width={Dimensions.get("window").width - 40}
-          height={200}
-          chartConfig={{
-            color: () => "#222",
-            labelColor: () => "#222",
-          }}
-          accessor="amount"
-          backgroundColor="transparent"
-          paddingLeft="10"
-          absolute
-        />
-        {/* Leyenda con montos */}
-        <View style={styles.leyenda}>
-          {pieData.map((item) => (
-            <View key={item.name} style={styles.leyendaItem}>
-              <View
-                style={[styles.leyendaColor, { backgroundColor: item.color }]}
-              />
-              <Text style={styles.leyendaText}>
-                <Text style={{ fontWeight: "bold" }}>{item.amount}</Text>{" "}
-                {item.name}
-              </Text>
+                <Text
+                  style={[
+                    styles.mesBtnText,
+                    mesSeleccionado === mes.value && styles.mesBtnTextActivo,
+                  ]}
+                >
+                  {mes.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+        {/* Resumen */}
+        <Text style={styles.resumen}>
+          Ingresos: <Text style={{ color: "#1976d2" }}>${totalIngresos}</Text> |{" "}
+          Egresos: <Text style={{ color: "#e74c3c" }}>${totalEgresos}</Text>
+        </Text>
+        {/* Pie Chart de egresos */}
+        <Text style={styles.subtitulo}>Egresos por categoría</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#1976d2" />
+        ) : (
+          <>
+            <PieChart
+              data={pieData}
+              width={Dimensions.get("window").width - 40}
+              height={200}
+              chartConfig={{
+                color: () => "#222",
+                labelColor: () => "#222",
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="10"
+              absolute
+            />
+            {/* Leyenda con montos */}
+            <View style={styles.leyenda}>
+              {pieData.map((item) => (
+                <View key={item.name} style={styles.leyendaItem}>
+                  <View
+                    style={[
+                      styles.leyendaColor,
+                      { backgroundColor: item.color },
+                    ]}
+                  />
+                  <Text style={styles.leyendaText}>
+                    <Text style={{ fontWeight: "bold" }}>{item.amount}</Text>{" "}
+                    {item.name}
+                  </Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-        {/* Leyenda de colores */}
-        <View style={styles.leyendaColores}>
-          <View style={styles.leyendaFila}>
-            <View
-              style={[styles.leyendaColor, { backgroundColor: "#FFD700" }]}
+          </>
+        )}
+        {/* Pie Chart de ingresos (opcional) */}
+        <Text style={styles.subtitulo}>Ingresos por categoría</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#1976d2" />
+        ) : (
+          <>
+            <PieChart
+              data={pieDataIngresos}
+              width={Dimensions.get("window").width - 40}
+              height={200}
+              chartConfig={{
+                color: () => "#222",
+                labelColor: () => "#222",
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="10"
+              absolute
             />
-            <Text style={styles.leyendaTextColor}>Comida</Text>
-            <View
-              style={[styles.leyendaColor, { backgroundColor: "#FF0000" }]}
-            />
-            <Text style={styles.leyendaTextColor}>Compras</Text>
-            <View
-              style={[styles.leyendaColor, { backgroundColor: "#4B0082" }]}
-            />
-            <Text style={styles.leyendaTextColor}>Renta</Text>
-          </View>
-          <View style={styles.leyendaFila}>
-            <View
-              style={[styles.leyendaColor, { backgroundColor: "#00FA9A" }]}
-            />
-            <Text style={styles.leyendaTextColor}>Transporte</Text>
-            <View
-              style={[styles.leyendaColor, { backgroundColor: "#4169E1" }]}
-            />
-            <Text style={styles.leyendaTextColor}>Entretenimiento</Text>
-          </View>
-        </View>
-        {/* Line Chart */}
-        <View style={{ marginTop: 20 }}>
+            <View style={styles.leyenda}>
+              {pieDataIngresos.map((item) => (
+                <View key={item.name} style={styles.leyendaItem}>
+                  <View
+                    style={[
+                      styles.leyendaColor,
+                      { backgroundColor: item.color },
+                    ]}
+                  />
+                  <Text style={styles.leyendaText}>
+                    <Text style={{ fontWeight: "bold" }}>{item.amount}</Text>{" "}
+                    {item.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+        {/* Line Chart semanal */}
+        <Text style={styles.subtitulo}>Evolución semanal</Text>
+        <View style={{ marginTop: 10 }}>
           <LineChart
             data={{
               labels: lineLabels,
@@ -238,15 +327,15 @@ const styles = StyleSheet.create({
   mesesContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 8,
     width: "100%",
   },
   mesBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     backgroundColor: "#e0f7fa",
     borderRadius: 24,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
     marginBottom: 8,
   },
   mesBtnActivo: {
@@ -254,12 +343,30 @@ const styles = StyleSheet.create({
   },
   mesBtnText: {
     color: "#1976d2",
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "serif",
   },
   mesBtnTextActivo: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  resumen: {
+    fontSize: 18,
+    color: "#222",
+    fontFamily: "serif",
+    marginBottom: 8,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  subtitulo: {
+    fontSize: 18,
+    color: "#1976d2",
+    fontFamily: "serif",
+    fontWeight: "bold",
+    marginTop: 16,
+    marginBottom: 4,
+    alignSelf: "flex-start",
+    marginLeft: 20,
   },
   leyenda: {
     flexDirection: "column",
@@ -285,22 +392,5 @@ const styles = StyleSheet.create({
     color: "#222",
     fontFamily: "serif",
     marginRight: 16,
-  },
-  leyendaColores: {
-    width: "90%",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  leyendaFila: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  leyendaTextColor: {
-    fontSize: 15,
-    color: "#222",
-    fontFamily: "serif",
-    marginRight: 18,
-    marginLeft: 4,
   },
 });

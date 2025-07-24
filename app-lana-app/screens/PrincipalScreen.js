@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -15,14 +14,48 @@ import {
   MaterialIcons,
   Ionicons,
 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PrincipalScreen({ navigation }) {
+  const [nombre, setNombre] = useState("");
+  const [saldo, setSaldo] = useState(0);
+  const [transacciones, setTransacciones] = useState([]);
+
+  useEffect(() => {
+    const getUserAndData = async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setNombre(user.nombre);
+
+          // Obtener saldo y transacciones del backend
+          const res = await fetch(
+            `http://10.0.0.11:3000/usuario/${user.id}/resumen`
+          );
+          const data = await res.json();
+          if (data.success) {
+            setSaldo(data.saldo);
+            setTransacciones(data.transacciones);
+          }
+        }
+      } catch (e) {
+        setNombre("");
+        setSaldo(0);
+        setTransacciones([]);
+      }
+    };
+    getUserAndData();
+  }, []);
+
   return (
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }} />
-        <Text style={styles.bienvenida}>Bienvenido, Juan</Text>
+        <Text style={styles.bienvenida}>
+          {nombre ? `Bienvenido, ${nombre}` : "Bienvenido"}
+        </Text>
         <TouchableOpacity style={styles.bellContainer}>
           <Ionicons name="notifications-outline" size={28} color="#222" />
         </TouchableOpacity>
@@ -34,7 +67,9 @@ export default function PrincipalScreen({ navigation }) {
       {/* Card principal */}
       <View style={styles.card}>
         <Text style={styles.saldoLabel}>Saldo total</Text>
-        <Text style={styles.saldo}>$3,800.00</Text>
+        <Text style={styles.saldo}>
+          ${saldo.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+        </Text>
         {/* Acciones rápidas */}
         <View style={styles.quickActions}>
           <TouchableOpacity
@@ -72,50 +107,34 @@ export default function PrincipalScreen({ navigation }) {
           <Text style={styles.verTodo}>Ver todo</Text>
         </View>
         <ScrollView style={{ width: "100%" }}>
-          <View style={styles.transaccionRow}>
-            <View style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}>
-              <MaterialIcons name="restaurant" size={24} color="#222" />
+          {transacciones.map((t, i) => (
+            <View key={i} style={styles.transaccionRow}>
+              <View style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}>
+                <MaterialIcons name="restaurant" size={24} color="#222" />
+              </View>
+              <View style={styles.transInfo}>
+                <Text style={styles.transTitle}>
+                  {t.categoria || "Transacción"}
+                </Text>
+                <Text style={styles.transDate}>
+                  {new Date(t.fecha).toLocaleDateString()}
+                </Text>
+                <Text style={styles.transDesc}>{t.descripcion}</Text>
+              </View>
+              <Text
+                style={
+                  t.cantidad < 0
+                    ? styles.transAmountRed
+                    : styles.transAmountGreen
+                }
+              >
+                {t.cantidad < 0 ? "- " : ""}$
+                {Math.abs(t.cantidad).toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                })}
+              </Text>
             </View>
-            <View style={styles.transInfo}>
-              <Text style={styles.transTitle}>Comida</Text>
-              <Text style={styles.transDate}>10 de mayo de 2025</Text>
-              <Text style={styles.transDesc}>Almuerzo en restaurante</Text>
-            </View>
-            <Text style={styles.transAmountRed}>- $450.00</Text>
-          </View>
-          <View style={styles.transaccionRow}>
-            <View style={[styles.transIcon, { backgroundColor: "#f7c6c7" }]}>
-              <MaterialIcons name="shopping-cart" size={24} color="#222" />
-            </View>
-            <View style={styles.transInfo}>
-              <Text style={styles.transTitle}>Compras</Text>
-              <Text style={styles.transDate}>17 de mayo de 2025</Text>
-              <Text style={styles.transDesc}>Zapatos nuevos</Text>
-            </View>
-            <Text style={styles.transAmountRed}>- $2,000.00</Text>
-          </View>
-          <View style={styles.transaccionRow}>
-            <View style={[styles.transIcon, { backgroundColor: "#e2d1f9" }]}>
-              <MaterialIcons name="home" size={24} color="#222" />
-            </View>
-            <View style={styles.transInfo}>
-              <Text style={styles.transTitle}>Renta</Text>
-              <Text style={styles.transDate}>21 de mayo de 2025</Text>
-              <Text style={styles.transDesc}>Renta de vivienda</Text>
-            </View>
-            <Text style={styles.transAmountRed}>- $5,000.00</Text>
-          </View>
-          <View style={styles.transaccionRow}>
-            <View style={[styles.transIcon, { backgroundColor: "#b2f7b8" }]}>
-              <Feather name="plus-circle" size={24} color="#222" />
-            </View>
-            <View style={styles.transInfo}>
-              <Text style={styles.transTitle}>Dinero añadido</Text>
-              <Text style={styles.transDate}>22 de mayo de 2025</Text>
-              <Text style={styles.transDesc}>Visa ****9999</Text>
-            </View>
-            <Text style={styles.transAmountGreen}>$1,000.00</Text>
-          </View>
+          ))}
         </ScrollView>
       </View>
     </LinearGradient>

@@ -1,17 +1,30 @@
-import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
 
 export default function AyudaScreen() {
+  const [info, setInfo] = useState(null);
+
+  useEffect(() => {
+    const fetchInfo = async () => {
+      try {
+        const res = await fetch("http://10.0.0.11:3000/ayuda/info");
+        const data = await res.json();
+        if (data.success) setInfo(data.info);
+      } catch (e) {
+        setInfo(null);
+      }
+    };
+    fetchInfo();
+  }, []);
+
   return (
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>
-      {/* Header */}
+      {/* Header igual que antes */}
       <View style={styles.headerRow}>
-        <View style={{ flex: 1, alignItems: "flex-start" }}>
-          {/* Si quieres un botón atrás, ponlo aquí. Si no, deja vacío */}
-        </View>
+        <View style={{ flex: 1, alignItems: "flex-start" }} />
         <View style={{ flex: 2, alignItems: "center" }}>
           <LogoLana />
         </View>
@@ -23,14 +36,24 @@ export default function AyudaScreen() {
       </View>
       {/* Card */}
       <View style={styles.card}>
-        <TouchableOpacity style={styles.optionBtn}>
-          <Text style={styles.optionText}>Contáctanos</Text>
-          <Ionicons name="chevron-forward" size={24} color="#222" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionBtn}>
-          <Text style={styles.optionText}>Ayúdanos a mejorar</Text>
-          <Ionicons name="chevron-forward" size={24} color="#222" />
-        </TouchableOpacity>
+        {info ? (
+          <>
+            <Text style={styles.optionText}>Contacto: {info.contacto}</Text>
+            <Text style={styles.optionText}>Email: {info.email}</Text>
+            {/* Puedes mostrar más campos de la tabla ayuda */}
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.optionBtn}>
+              <Text style={styles.optionText}>Contáctanos</Text>
+              <Ionicons name="chevron-forward" size={24} color="#222" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.optionBtn}>
+              <Text style={styles.optionText}>Ayúdanos a mejorar</Text>
+              <Ionicons name="chevron-forward" size={24} color="#222" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </LinearGradient>
   );

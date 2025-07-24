@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,45 @@ import { FontAwesome, MaterialIcons, Feather } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 
 export default function RegisterScreen({ navigation }) {
+  const [nombre, setNombre] = useState("");
+  const [apellidos, setApellidos] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleRegister = async () => {
+    setError("");
+    setSuccess("");
+    if (!nombre || !apellidos || !telefono || !email || !contrasena) {
+      setError("Todos los campos son obligatorios");
+      return;
+    }
+    try {
+      const response = await fetch("http://10.0.0.11:3000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre,
+          apellidos,
+          email,
+          contrasena,
+          telefono,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
+        setTimeout(() => navigation.navigate("Login"), 1500);
+      } else {
+        setError(data.message || "Error al registrar");
+      }
+    } catch (e) {
+      setError("Error de conexión con el servidor");
+    }
+  };
+
   return (
     <LinearGradient colors={["#7fd8f7", "#185a9d"]} style={styles.background}>
       <Text style={styles.title}>Registro</Text>
@@ -22,13 +61,14 @@ export default function RegisterScreen({ navigation }) {
         <LogoLana />
       </View>
       <View style={styles.cardWrapper}>
-        {/* Avatar modal */}
         <View style={styles.card}>
           <View style={styles.inputBox}>
             <TextInput
               placeholder="Nombre"
               style={styles.input}
               placeholderTextColor="#222"
+              value={nombre}
+              onChangeText={setNombre}
             />
             <FontAwesome name="user" size={20} style={styles.inputIcon} />
           </View>
@@ -37,6 +77,8 @@ export default function RegisterScreen({ navigation }) {
               placeholder="Apellidos"
               style={styles.input}
               placeholderTextColor="#222"
+              value={apellidos}
+              onChangeText={setApellidos}
             />
             <FontAwesome name="user" size={20} style={styles.inputIcon} />
           </View>
@@ -46,6 +88,8 @@ export default function RegisterScreen({ navigation }) {
               style={styles.input}
               keyboardType="phone-pad"
               placeholderTextColor="#222"
+              value={telefono}
+              onChangeText={setTelefono}
             />
             <Feather name="phone" size={20} style={styles.inputIcon} />
           </View>
@@ -55,6 +99,9 @@ export default function RegisterScreen({ navigation }) {
               style={styles.input}
               keyboardType="email-address"
               placeholderTextColor="#222"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
             />
             <MaterialIcons name="email" size={20} style={styles.inputIcon} />
           </View>
@@ -64,10 +111,18 @@ export default function RegisterScreen({ navigation }) {
               style={styles.input}
               secureTextEntry
               placeholderTextColor="#222"
+              value={contrasena}
+              onChangeText={setContrasena}
             />
             <Feather name="lock" size={20} style={styles.inputIcon} />
           </View>
-          <TouchableOpacity style={styles.button}>
+          {error ? (
+            <Text style={{ color: "red", marginBottom: 8 }}>{error}</Text>
+          ) : null}
+          {success ? (
+            <Text style={{ color: "green", marginBottom: 8 }}>{success}</Text>
+          ) : null}
+          <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>REGISTRAR</Text>
           </TouchableOpacity>
           <Text style={styles.bottomText}>

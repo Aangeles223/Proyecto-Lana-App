@@ -6,94 +6,65 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function EditarPresupuestoScreen({ route, navigation }) {
   const { presupuesto } = route.params;
-  const [nombre, setNombre] = useState(presupuesto.nombre);
-  const [monto, setMonto] = useState(String(presupuesto.monto));
-  const [gastado, setGastado] = useState(String(presupuesto.gastado));
-  const [fechaInicio, setFechaInicio] = useState(new Date());
-  const [fechaFin, setFechaFin] = useState(new Date());
-  const [showInicio, setShowInicio] = useState(false);
-  const [showFin, setShowFin] = useState(false);
+  const [monto, setMonto] = useState(String(presupuesto.monto_mensual));
 
-  const handleGuardar = () => {
-    // Aquí puedes actualizar el presupuesto en tu BD o estado global
-    navigation.goBack();
+  const handleGuardar = async () => {
+    if (!monto || isNaN(Number(monto))) {
+      Alert.alert("Error", "Ingresa un monto válido.");
+      return;
+    }
+    const res = await fetch(
+      `http://10.0.0.11:3000/presupuestos/${presupuesto.id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monto_mensual: Number(monto) }),
+      }
+    );
+    const data = await res.json();
+    if (data.success) {
+      navigation.goBack();
+    } else {
+      Alert.alert("Error", "No se pudo actualizar el presupuesto.");
+    }
   };
 
   return (
-    <View style={styles.background}>
-      <View style={styles.centerContent}>
-        <Text style={styles.title}>Editar presupuesto</Text>
-        <TextInput
-          style={styles.input}
-          value={nombre}
-          onChangeText={setNombre}
-          placeholder="Nombre"
-        />
-        <TextInput
-          style={styles.input}
-          value={monto}
-          onChangeText={setMonto}
-          placeholder="Monto"
-          keyboardType="numeric"
-        />
-        <TextInput
-          style={styles.input}
-          value={gastado}
-          onChangeText={setGastado}
-          placeholder="Gastado"
-          keyboardType="numeric"
-        />
-        {/* Fecha de inicio */}
-        <TouchableOpacity
-          style={styles.selectRow}
-          onPress={() => setShowInicio(true)}
-        >
-          <Ionicons name="calendar" size={22} color="#1976d2" />
-          <Text style={styles.selectText}>
-            {fechaInicio.toLocaleDateString()}
-          </Text>
-        </TouchableOpacity>
-        {showInicio && (
-          <DateTimePicker
-            value={fechaInicio}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, selectedDate) => {
-              setShowInicio(false);
-              if (selectedDate) setFechaInicio(selectedDate);
-            }}
+    <KeyboardAvoidingView
+      style={styles.background}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.centerContent}>
+          <Text style={styles.title}>Editar presupuesto</Text>
+          <Text style={styles.label}>Categoría</Text>
+          <Text style={styles.categoriaText}>{presupuesto.categoria}</Text>
+          <Text style={styles.label}>Monto</Text>
+          <TextInput
+            style={styles.input}
+            value={monto}
+            onChangeText={setMonto}
+            placeholder="Monto"
+            keyboardType="numeric"
           />
-        )}
-        {/* Fecha de fin */}
-        <TouchableOpacity
-          style={styles.selectRow}
-          onPress={() => setShowFin(true)}
-        >
-          <Ionicons name="calendar" size={22} color="#1976d2" />
-          <Text style={styles.selectText}>{fechaFin.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-        {showFin && (
-          <DateTimePicker
-            value={fechaFin}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, selectedDate) => {
-              setShowFin(false);
-              if (selectedDate) setFechaFin(selectedDate);
-            }}
-          />
-        )}
-        <TouchableOpacity style={styles.button} onPress={handleGuardar}>
-          <Text style={styles.buttonText}>Guardar cambios</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity style={styles.button} onPress={handleGuardar}>
+            <Text style={styles.buttonText}>Guardar cambios</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -117,6 +88,23 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 30,
   },
+  label: {
+    fontSize: 18,
+    color: "#222",
+    fontFamily: "serif",
+    marginTop: 10,
+    marginBottom: 2,
+    alignSelf: "flex-start",
+    marginLeft: 10,
+  },
+  categoriaText: {
+    fontSize: 20,
+    color: "#1976d2",
+    fontFamily: "serif",
+    marginBottom: 10,
+    alignSelf: "flex-start",
+    marginLeft: 10,
+  },
   input: {
     fontSize: 22,
     color: "#222",
@@ -130,24 +118,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingVertical: 12,
     paddingHorizontal: 18,
-  },
-  selectRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginVertical: 10,
-    width: 340,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  selectText: {
-    fontSize: 20,
-    color: "#222",
-    fontFamily: "serif",
-    marginLeft: 12,
   },
   button: {
     backgroundColor: "#54bcd4",

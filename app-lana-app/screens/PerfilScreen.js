@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,18 +7,86 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
 export default function PerfilScreen({ navigation }) {
-  // Datos de ejemplo
-  const [nombre, setNombre] = useState("Juan");
-  const [apellidos, setApellidos] = useState("Pérez");
-  const [correo, setCorreo] = useState("juan@lana.com");
-  const [telefono, setTelefono] = useState("555-123-4567");
+  const [nombre, setNombre] = useState("");
+  const [apellidos, setApellidos] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [editando, setEditando] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  // Cargar datos reales del usuario
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUserId(user.id);
+          // Obtener datos actualizados de la BD
+          const res = await fetch(`http://10.0.0.11:3000/usuario/${user.id}`);
+          const data = await res.json();
+          if (data.success && data.user) {
+            setNombre(data.user.nombre);
+            setApellidos(data.user.apellidos);
+            setCorreo(data.user.email);
+            setTelefono(data.user.telefono || "");
+          }
+        }
+      } catch (e) {
+        Alert.alert("Error", "No se pudo cargar el perfil.");
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Guardar cambios en la BD y en AsyncStorage
+  const guardarCambios = async () => {
+    try {
+      const res = await fetch(`http://10.0.0.11:3000/usuario/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre,
+          apellidos,
+          email: correo,
+          telefono,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Actualiza AsyncStorage
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const updatedUser = {
+            ...user,
+            nombre,
+            apellidos,
+            email: correo,
+            telefono,
+          };
+          await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+        }
+        setEditando(false);
+        Alert.alert("Éxito", "Perfil actualizado correctamente.");
+      } else {
+        Alert.alert(
+          "Error",
+          data.message || "No se pudo actualizar el perfil."
+        );
+      }
+    } catch (e) {
+      Alert.alert("Error", "No se pudo actualizar el perfil.");
+    }
+  };
 
   return (
     <View style={styles.background}>
@@ -91,7 +159,13 @@ export default function PerfilScreen({ navigation }) {
       {/* Botón Editar/Guardar */}
       <TouchableOpacity
         style={styles.button}
-        onPress={() => setEditando(!editando)}
+        onPress={() => {
+          if (editando) {
+            guardarCambios();
+          } else {
+            setEditando(true);
+          }
+        }}
       >
         <Text style={styles.buttonText}>{editando ? "Guardar" : "Editar"}</Text>
       </TouchableOpacity>

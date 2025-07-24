@@ -1,5 +1,12 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+} from "react-native";
 import {
   Ionicons,
   FontAwesome5,
@@ -8,18 +15,64 @@ import {
 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function MenuScreen({ navigation, onLogout }) {
+  const [user, setUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const userObj = JSON.parse(userStr);
+          // (Opcional) Refresca datos desde la BD
+          const res = await fetch(
+            `http://10.0.0.11:3000/usuario/${userObj.id}`
+          );
+          const data = await res.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+          } else {
+            setUser(userObj); // fallback a local
+          }
+        }
+      } catch (e) {
+        setUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Función para cerrar sesión
+  const handleLogout = () => {
+    setShowModal(false);
+    onLogout();
+    navigation.navigate("Principal");
+  };
+
   return (
     <LinearGradient colors={["#fff", "#faf7f7"]} style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.headerRow}>
-        {/* Flecha eliminada */}
         <View style={styles.logoContainer}>
           <LogoLana />
         </View>
       </View>
       <Text style={styles.title}>Menú</Text>
+      {/* Info de usuario */}
+      {user && (
+        <View style={styles.userInfoBox}>
+          <Ionicons name="person-circle-outline" size={60} color="#185a9d" />
+          <View style={{ marginLeft: 12 }}>
+            <Text style={styles.userName}>
+              {user.nombre} {user.apellidos}
+            </Text>
+            <Text style={styles.userEmail}>{user.email}</Text>
+          </View>
+        </View>
+      )}
       {/* Opciones */}
       <View style={styles.menuContainer}>
         <TouchableOpacity
@@ -68,10 +121,7 @@ export default function MenuScreen({ navigation, onLogout }) {
       {/* Botón Salir */}
       <TouchableOpacity
         style={styles.logoutBtn}
-        onPress={() => {
-          onLogout();
-          navigation.navigate("Principal"); // Esto fuerza el tab a refrescar
-        }}
+        onPress={() => setShowModal(true)}
       >
         <Text style={styles.logoutText}>Salir</Text>
         <Ionicons
@@ -81,6 +131,31 @@ export default function MenuScreen({ navigation, onLogout }) {
           style={{ marginLeft: 8 }}
         />
       </TouchableOpacity>
+
+      {/* Modal de confirmación */}
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>¿Estás seguro de salir?</Text>
+            <View style={styles.modalBtnRow}>
+              <Pressable style={styles.modalBtn} onPress={handleLogout}>
+                <Text style={{ color: "red", fontWeight: "bold" }}>Sí</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalBtn}
+                onPress={() => setShowModal(false)}
+              >
+                <Text style={{ color: "#222" }}>No</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -92,7 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 10,
     paddingHorizontal: 16,
-    justifyContent: "center", // Centra el logo
+    justifyContent: "center",
   },
   title: {
     fontSize: 38,
@@ -100,6 +175,25 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     textAlign: "center",
     marginVertical: 18,
+    color: "#222",
+  },
+  userInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e6f7fa",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 24,
+    marginBottom: 10,
+    elevation: 2,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#185a9d",
+  },
+  userEmail: {
+    fontSize: 15,
     color: "#222",
   },
   menuContainer: {
@@ -136,5 +230,36 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "serif",
     marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: 300,
+    alignItems: "center",
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#222",
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  modalBtnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
   },
 });

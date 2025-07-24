@@ -22,10 +22,12 @@ import PagosFijosScreen from "./screens/PagosFijosScreen";
 import AgregarNuevoPagoScreen from "./screens/AgregarNuevoPagoScreen";
 import EditarPagoFijoScreen from "./screens/EditarPagoFijoScreen";
 import SplashScreen from "./screens/SplashScreen";
+import InactivityHandler from "./components/InactivityHandler";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// Tabs principales
 function MainTabs({ onLogout }) {
   return (
     <Tab.Navigator
@@ -73,21 +75,24 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
 
+  // Cargar estado de sesión y controlar splash
   useEffect(() => {
     AsyncStorage.getItem("isLoggedIn").then((value) => {
       setIsLoggedIn(value === "true");
+      console.log("isLoggedIn desde AsyncStorage:", value);
     });
-    // Splash dura 2.5 segundos
     const timer = setTimeout(() => setShowSplash(false), 2500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Nueva función para cerrar sesión
+  // Logout global
   const handleLogout = async () => {
     await AsyncStorage.removeItem("isLoggedIn");
+    await AsyncStorage.removeItem("user");
     setIsLoggedIn(false);
   };
 
+  // Mostrar splash mientras carga
   if (isLoggedIn === null) return null;
 
   return (
@@ -97,8 +102,13 @@ export default function App() {
           <Stack.Screen name="Splash" component={SplashScreen} />
         ) : isLoggedIn ? (
           <>
+            {/* Envolvemos TODA la navegación protegida con InactivityHandler */}
             <Stack.Screen name="MainTabs">
-              {(props) => <MainTabs {...props} onLogout={handleLogout} />}
+              {(props) => (
+                <InactivityHandler onLogout={handleLogout}>
+                  <MainTabs {...props} onLogout={handleLogout} />
+                </InactivityHandler>
+              )}
             </Stack.Screen>
             <Stack.Screen name="Perfil" component={PerfilScreen} />
             <Stack.Screen name="Presupuesto" component={PresupuestosScreen} />
@@ -142,7 +152,11 @@ export default function App() {
           </>
         ) : (
           <>
-            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Login">
+              {(props) => (
+                <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn} />
+              )}
+            </Stack.Screen>
             <Stack.Screen name="Register" component={RegisterScreen} />
           </>
         )}
