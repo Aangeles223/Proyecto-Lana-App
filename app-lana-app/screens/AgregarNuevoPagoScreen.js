@@ -1,26 +1,145 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import DropDownPicker from "react-native-dropdown-picker";
 
 export default function AgregarPagoFijoScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
-  const [proximo, setProximo] = useState("");
+  const [diaPago, setDiaPago] = useState("");
+  const [usuarioId, setUsuarioId] = useState(null);
 
-  const handleGuardar = () => {
-    // Aquí puedes guardar el pago fijo en tu BD o estado global
-    navigation.goBack();
+  // Dropdown picker states para categorías
+  const [categoriaOpen, setCategoriaOpen] = useState(false);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [categorias, setCategorias] = useState([]);
+
+  // Dropdown picker estados para servicios
+  const [servicioOpen, setServicioOpen] = useState(false);
+  const [servicioSeleccionado, setServicioSeleccionado] = useState(null);
+  const [servicios, setServicios] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [cargandoDatos, setCargandoDatos] = useState(true);
+
+  useEffect(() => {
+    const cargarUsuarioYCategoriasServicios = async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUsuarioId(user.id);
+        }
+
+        // Cargar categorías
+        const resCat = await fetch("http://192.168.1.67:3000/categorias");
+        const dataCat = await resCat.json();
+        if (dataCat.success) {
+          const catItems = dataCat.categorias.map((c) => ({
+            label: c.nombre,
+            value: c.id,
+          }));
+          setCategorias(catItems);
+          if (catItems.length > 0) setCategoriaSeleccionada(catItems[0].value);
+        }
+
+        // Cargar servicios
+        const resServ = await fetch("http://192.168.1.67:3000/servicios");
+        const dataServ = await resServ.json();
+        if (dataServ.success) {
+          const servItems = dataServ.servicios.map((s) => ({
+            label: s.nombre,
+            value: s.id,
+          }));
+          setServicios(servItems);
+          if (servItems.length > 0) setServicioSeleccionado(servItems[0].value);
+        }
+      } catch (error) {
+        Alert.alert("Error", "No se pudo cargar categorías o servicios.");
+        console.error(error);
+      } finally {
+        setCargandoDatos(false);
+      }
+    };
+
+    cargarUsuarioYCategoriasServicios();
+  }, []);
+
+  // Para evitar que se abran dos dropdown al mismo tiempo
+  const onCategoriaOpen = () => setServicioOpen(false);
+  const onServicioOpen = () => setCategoriaOpen(false);
+
+  const handleGuardar = async () => {
+    if (
+      !nombre.trim() ||
+      !monto ||
+      !diaPago.trim() ||
+      !categoriaSeleccionada ||
+      !servicioSeleccionado
+    ) {
+      Alert.alert("Error", "Por favor llena todos los campos.");
+      return;
+    }
+    if (isNaN(Number(monto))) {
+      Alert.alert("Error", "El monto debe ser un número válido.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://192.168.1.67:3000/pagos-fijos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: usuarioId,
+          nombre: nombre.trim(),
+          monto: parseFloat(monto),
+          dia_pago: diaPago.trim(),
+          categoria_id: categoriaSeleccionada,
+          servicio_id: servicioSeleccionado,
+          activo: 1,
+          pagado: 0,
+          ultima_fecha: null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        Alert.alert("Éxito", "Pago fijo agregado correctamente.");
+        navigation.goBack();
+      } else {
+        Alert.alert("Error", data.message || "No se pudo agregar el pago.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Error al conectar con el servidor.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (cargandoDatos) {
+    return (
+      <View style={[styles.background, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#1976d2" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.background}>
       <Text style={styles.title}>Agregar Pago Fijo</Text>
+
       <TextInput
         style={styles.input}
         value={nombre}
@@ -28,6 +147,7 @@ export default function AgregarPagoFijoScreen({ navigation }) {
         placeholder="Nombre (ej. Renta)"
         placeholderTextColor="#bdbdbd"
       />
+
       <TextInput
         style={styles.input}
         value={monto}
@@ -36,19 +156,60 @@ export default function AgregarPagoFijoScreen({ navigation }) {
         placeholderTextColor="#bdbdbd"
         keyboardType="numeric"
       />
+
       <TextInput
         style={styles.input}
-        value={proximo}
-        onChangeText={setProximo}
-        placeholder="Próximo pago (ej. 5 jun.)"
+        value={diaPago}
+        onChangeText={setDiaPago}
+        placeholder="Día de pago (ej. 5)"
         placeholderTextColor="#bdbdbd"
+        keyboardType="numeric"
       />
-      <TouchableOpacity style={styles.button} onPress={handleGuardar}>
-        <Text style={styles.buttonText}>Guardar</Text>
+
+      <Text style={styles.label}>Categoría:</Text>
+      <DropDownPicker
+        open={categoriaOpen}
+        value={categoriaSeleccionada}
+        items={categorias}
+        setOpen={setCategoriaOpen}
+        setValue={setCategoriaSeleccionada}
+        onOpen={onCategoriaOpen}
+        style={styles.dropdown}
+        dropDownContainerStyle={styles.dropdownContainer}
+        listItemLabelStyle={{ fontFamily: "serif" }}
+        dropDownDirection="BOTTOM"
+        zIndex={3000}
+        zIndexInverse={1000}
+      />
+
+      <Text style={styles.label}>Servicio:</Text>
+      <DropDownPicker
+        open={servicioOpen}
+        value={servicioSeleccionado}
+        items={servicios}
+        setOpen={setServicioOpen}
+        setValue={setServicioSeleccionado}
+        onOpen={onServicioOpen}
+        style={styles.dropdown}
+        dropDownContainerStyle={styles.dropdownContainer}
+        listItemLabelStyle={{ fontFamily: "serif" }}
+        dropDownDirection="BOTTOM"
+        zIndex={2000}
+        zIndexInverse={2000}
+      />
+
+      <TouchableOpacity
+        style={[styles.button, loading && { opacity: 0.6 }]}
+        onPress={handleGuardar}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? "Guardando..." : "Guardar"}</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.cancelBtn}
         onPress={() => navigation.goBack()}
+        disabled={loading}
       >
         <Text style={styles.cancelBtnText}>Cancelar</Text>
       </TouchableOpacity>
@@ -60,9 +221,8 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     backgroundColor: "#faf7f7",
-    justifyContent: "center",
-    alignItems: "center",
     paddingTop: 30,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 28,
@@ -79,17 +239,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1976d2",
     borderRadius: 12,
-    width: 320,
     marginBottom: 18,
     backgroundColor: "#fff",
     paddingVertical: 12,
     paddingHorizontal: 18,
   },
+  label: {
+    fontSize: 16,
+    fontFamily: "serif",
+    marginBottom: 6,
+    color: "#1976d2",
+    fontWeight: "bold",
+  },
+  dropdown: {
+    backgroundColor: "#fff",
+    borderColor: "#1976d2",
+    borderRadius: 12,
+    marginBottom: 18,
+    height: 40,
+    paddingHorizontal: 10,
+  },
+  dropdownContainer: {
+    borderColor: "#1976d2",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
   button: {
     backgroundColor: "#54bcd4",
     borderRadius: 12,
     paddingVertical: 14,
-    width: 220,
+    width: "100%",
     alignItems: "center",
     marginTop: 10,
   },

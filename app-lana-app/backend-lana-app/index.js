@@ -192,6 +192,13 @@ app.get("/categorias", (req, res) => {
   });
 });
 
+app.get("/servicios", (req, res) => {
+  db.query("SELECT id, nombre, descripcion FROM servicios", (err, results) => {
+    if (err) return res.status(500).json({ success: false, error: err });
+    res.json({ success: true, servicios: results });
+  });
+});
+
 app.get("/presupuestos/:usuario_id", (req, res) => {
   const usuario_id = req.params.usuario_id;
   // Trae el presupuesto, nombre de la categoría y gasto acumulado del mes
@@ -295,6 +302,113 @@ app.get("/pagos-fijos/:usuario_id", (req, res) => {
     res.json({ success: true, pagos: results });
   });
 });
+
+// Ruta para agregar un nuevo pago fijo
+app.post("/pagos-fijos", (req, res) => {
+  const {
+    usuario_id,
+    servicio_id,
+    categoria_id,
+    nombre,
+    monto,
+    dia_pago,
+    activo = 1,
+    pagado = 0,
+    ultima_fecha = null,
+  } = req.body;
+
+  if (
+    !usuario_id ||
+    !servicio_id ||
+    !categoria_id ||
+    !nombre ||
+    monto === undefined ||
+    dia_pago === undefined
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Faltan datos obligatorios (usuario_id, servicio_id, categoria_id, nombre, monto, dia_pago)",
+    });
+  }
+
+  const sql = `
+    INSERT INTO pagos_fijos (usuario_id, servicio_id, categoria_id, nombre, monto, dia_pago, activo, pagado, ultima_fecha)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(
+    sql,
+    [usuario_id, servicio_id, categoria_id, nombre, monto, dia_pago, activo, pagado, ultima_fecha],
+    (err, result) => {
+      if (err) {
+        console.error("Error al insertar pago fijo:", err);
+        return res.status(500).json({ success: false, error: err });
+      }
+      res.json({
+        success: true,
+        id: result.insertId,
+        message: "Pago fijo creado correctamente",
+      });
+    }
+  );
+});
+
+// Ruta para actualizar un pago fijo
+app.put("/pagos-fijos/:id", (req, res) => {
+  const pagoId = req.params.id;
+  const {
+    usuario_id,
+    servicio_id,
+    categoria_id,
+    nombre,
+    monto,
+    dia_pago,
+    activo = 1,
+    pagado = 0,
+    ultima_fecha = null,
+  } = req.body;
+
+  if (
+    !usuario_id ||
+    !servicio_id ||
+    !categoria_id ||
+    !nombre ||
+    monto === undefined ||
+    dia_pago === undefined
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Faltan datos obligatorios (usuario_id, servicio_id, categoria_id, nombre, monto, dia_pago)",
+    });
+  }
+
+  const sql = `
+    UPDATE pagos_fijos
+    SET usuario_id = ?, servicio_id = ?, categoria_id = ?, nombre = ?, monto = ?, dia_pago = ?, activo = ?, pagado = ?, ultima_fecha = ?
+    WHERE id = ?
+  `;
+
+  db.query(
+    sql,
+    [usuario_id, servicio_id, categoria_id, nombre, monto, dia_pago, activo, pagado, ultima_fecha, pagoId],
+    (err, result) => {
+      if (err) {
+        console.error("Error al actualizar pago fijo:", err);
+        return res.status(500).json({ success: false, error: err });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: "Pago fijo no encontrado" });
+      }
+      res.json({
+        success: true,
+        message: "Pago fijo actualizado correctamente",
+      });
+    }
+  );
+});
+
 
 // 🚀 Levantar el servidor
 const PORT = 3000;

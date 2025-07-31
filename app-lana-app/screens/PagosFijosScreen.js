@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import {
   View,
   Text,
@@ -16,29 +18,33 @@ export default function PagosFijosScreen({ navigation }) {
   const [expandedId, setExpandedId] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPagos = async () => {
-      try {
-        const userStr = await AsyncStorage.getItem("user");
-        const user = JSON.parse(userStr);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchPagos = async () => {
+        setLoading(true);
+        try {
+          const userStr = await AsyncStorage.getItem("user");
+          const user = JSON.parse(userStr);
 
-        const res = await fetch(`http://192.168.1.67:3000/pagos-fijos/${user.id}`);
-        const data = await res.json();
+          const res = await fetch(`http://192.168.1.67:3000/pagos-fijos/${user.id}`);
+          const data = await res.json();
 
-        if (data.success) {
-          setPagos(data.pagos);
-        } else {
-          console.error("Error desde API:", data);
+          if (data.success) {
+            setPagos(data.pagos);
+          } else {
+            console.error("Error desde API:", data);
+          }
+        } catch (error) {
+          console.error("Error al obtener pagos fijos:", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error al obtener pagos fijos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchPagos();
-  }, []);
+      fetchPagos();
+    }, [])
+  );
+
 
   const getIconoPorNombre = (nombre) => {
     const lower = nombre.toLowerCase();
@@ -112,7 +118,7 @@ export default function PagosFijosScreen({ navigation }) {
                     <Text style={styles.detalleLabel}>Detalles del pago:</Text>
                     <Text style={styles.detalleDato}>Nombre: {pago.nombre}</Text>
                     <Text style={styles.detalleDato}>Monto: ${pago.monto}</Text>
-                    <Text style={styles.detalleDato}>Último pago: {pago.ultima}</Text>
+                    <Text style={styles.detalleDato}>Último pago: {new Date(pago.ultima_fecha).toLocaleDateString()}</Text>
                     <Text style={styles.detalleDato}>
                       Estado: {pago.pagado ? "Pagado" : "Pendiente"}
                     </Text>
