@@ -22,7 +22,7 @@ export default function CrearPresupuestoScreen({ navigation }) {
 
   useEffect(() => {
     const fetchCategorias = async () => {
-      const res = await fetch("http://10.0.0.11:3000/categorias");
+      const res = await fetch("http://192.168.1.67:3000/categorias");
       const data = await res.json();
       if (data.success) {
         setCategorias(data.categorias);

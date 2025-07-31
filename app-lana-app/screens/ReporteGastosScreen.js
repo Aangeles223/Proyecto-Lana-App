@@ -55,7 +55,7 @@ export default function ReporteGastosScreen({ navigation }) {
       const userStr = await AsyncStorage.getItem("user");
       const user = JSON.parse(userStr);
       const res = await fetch(
-        `http://10.0.0.11:3000/reporte/${user.id}/${anioSeleccionado}/${mesSeleccionado}`
+        `http://192.168.1.67:3000/reporte/${user.id}/${anioSeleccionado}/${mesSeleccionado}`
       );
       const data = await res.json();
       if (data.success) setReporte(data.reporte);

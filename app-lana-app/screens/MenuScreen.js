@@ -29,7 +29,7 @@ export default function MenuScreen({ navigation, onLogout }) {
           const userObj = JSON.parse(userStr);
           // (Opcional) Refresca datos desde la BD
           const res = await fetch(
-            `http://10.0.0.11:3000/usuario/${userObj.id}`
+            `http://192.168.1.67:3000/usuario/${userObj.id}`
           );
           const data = await res.json();
           if (data.success && data.user) {

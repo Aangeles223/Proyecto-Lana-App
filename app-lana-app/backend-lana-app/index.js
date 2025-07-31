@@ -12,7 +12,7 @@ app.use(cors());
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "Master12$",
+  password: "12358",
   database: "lana_app",
 });
 
@@ -268,6 +268,36 @@ app.get("/reporte/:usuario_id/:anio/:mes", (req, res) => {
   );
 });
 
-app.listen(3000, "0.0.0.0", () => {
-  console.log("API corriendo en http://0.0.0.0:3000");
+//Ruta para obtener pagos fijos de un usuario
+app.get("/pagos-fijos/:usuario_id", (req, res) => {
+  const usuario_id = req.params.usuario_id;
+
+  const sql = `
+    SELECT 
+      id,
+      servicio_id,
+      nombre,
+      monto,
+      categoria_id,
+      dia_pago,
+      pagado,
+      ultima_fecha
+    FROM pagos_fijos
+    WHERE usuario_id = ? AND activo = 1
+  `;
+
+  db.query(sql, [usuario_id], (err, results) => {
+    if (err) {
+      console.error("❌ Error al consultar pagos fijos:", err);
+      return res.status(500).json({ success: false, error: err });
+    }
+
+    res.json({ success: true, pagos: results });
+  });
+});
+
+// 🚀 Levantar el servidor
+const PORT = 3000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🟢 API corriendo en http://0.0.0.0:${PORT}`);
 });

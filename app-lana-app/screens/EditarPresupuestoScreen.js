@@ -23,7 +23,7 @@ export default function EditarPresupuestoScreen({ route, navigation }) {
       return;
     }
     const res = await fetch(
-      `http://10.0.0.11:3000/presupuestos/${presupuesto.id}`,
+      `http://192.168.1.67:3000/presupuestos/${presupuesto.id}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
