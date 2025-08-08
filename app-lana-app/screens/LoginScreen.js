@@ -19,7 +19,7 @@ import jwt_decode from "jwt-decode";
 import Constants from "expo-constants";
 
 // Determina host en función de Expo debuggerHost (localhost, emulador o LAN) o IP fija de tu PC
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
 const BASE_URL = `http://${host}:3000`;
 
 const { width, height } = Dimensions.get("window");

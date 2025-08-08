@@ -18,7 +18,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 // Determina host y base URL para API proxy
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
 const BASE_URL = `http://${host}:3000`;
 
 export default function PrincipalScreen({ navigation }) {
@@ -55,9 +55,15 @@ export default function PrincipalScreen({ navigation }) {
         return;
       }
       if (Array.isArray(history)) {
-        setTransacciones(history);
-        // Calcular saldo sumando cantidades
-        const total = history.reduce((sum, t) => sum + (t.monto || 0), 0);
+        // Asegurar que monto y cantidad sean números
+        const cleaned = history.map((t) => ({
+          ...t,
+          monto: Number(t.monto),
+          cantidad: Number(t.cantidad),
+        }));
+        setTransacciones(cleaned);
+        // Calcular saldo correctamente
+        const total = cleaned.reduce((sum, t) => sum + (t.cantidad || 0), 0);
         setSaldo(total);
       }
     } catch (e) {
@@ -91,7 +97,7 @@ export default function PrincipalScreen({ navigation }) {
       {/* Card principal */}
       <View style={styles.card}>
         <Text style={styles.saldoLabel}>Saldo total</Text>
-        <Text style={styles.saldo}>
+        <Text style={styles.saldo} numberOfLines={1} adjustsFontSizeToFit>
           ${saldo.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
         </Text>
         {/* Acciones rápidas */}
@@ -128,7 +134,11 @@ export default function PrincipalScreen({ navigation }) {
         {/* Resumen de transacciones */}
         <View style={styles.resumenHeader}>
           <Text style={styles.resumenTitle}>Resumen de Transacciones</Text>
-          <Text style={styles.verTodo}>Ver todo</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Transacciones")}
+          >
+            <Text style={styles.verTodo}>Ver todo</Text>
+          </TouchableOpacity>
         </View>
         <ScrollView style={{ width: "100%" }}>
           {transacciones.map((t, i) => (
@@ -206,10 +216,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   saldo: {
-    fontSize: 38,
+    fontSize: 48, // tamaño de fuente aumentado
     fontWeight: "bold",
     color: "#222",
     marginBottom: 20,
+    flexShrink: 1, // permite que el texto se reduzca para caber
+    textAlign: "center", // centrar el texto
   },
   quickActions: {
     flexDirection: "row",

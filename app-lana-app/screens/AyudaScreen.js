@@ -10,7 +10,7 @@ export default function AyudaScreen() {
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const res = await fetch("http://10.0.0.11:3000/ayuda/info");
+        const res = await fetch("http://10.16.36.167/ayuda/info");
         const data = await res.json();
         if (data.success) setInfo(data.info);
       } catch (e) {

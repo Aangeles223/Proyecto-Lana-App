@@ -399,7 +399,8 @@ app.get("/servicios", (req, res) => {
   });
 });
 
-// Start server
-app.listen(3000, "0.0.0.0", () => {
-  console.log("Proxy Express corriendo en http://0.0.0.0:3000");
+// Iniciar servidor proxy en puerto dinámico
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Proxy Express corriendo en http://0.0.0.0:${PORT}`);
 });

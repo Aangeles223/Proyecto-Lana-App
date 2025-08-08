@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
 // Determinar base URL
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
 const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarPagoFijoScreen({ navigation }) {

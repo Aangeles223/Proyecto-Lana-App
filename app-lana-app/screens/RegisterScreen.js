@@ -16,7 +16,7 @@ import { FontAwesome, MaterialIcons, Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 // Determina host en función de Expo debuggerHost (localhost, emulador o LAN) o IP fija de tu PC
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
 const BASE_URL = `http://${host}:3000`;
 // console.log(`Base URL: ${BASE_URL}`);
 

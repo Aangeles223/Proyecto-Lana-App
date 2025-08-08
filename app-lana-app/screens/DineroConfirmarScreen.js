@@ -8,6 +8,11 @@ import {
 import * as Notifications from "expo-notifications";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarDineroConfirmarScreen({ navigation, route }) {
   const { monto, metodo, icon, extra } = route.params;
@@ -18,12 +23,12 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
       const userStr = await AsyncStorage.getItem("user");
       const { id: usuario_id } = JSON.parse(userStr);
       const fecha = new Date().toISOString().split("T")[0];
-      await fetch("http://10.0.0.11:3000/transacciones", {
+      await fetch(`${BASE_URL}/transacciones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           usuario_id,
-          categoria_id: null,
+          categoria_id: null, // ajusta si necesitas una categoría específica
           monto: Number(monto),
           tipo: "ingreso",
           fecha,
@@ -94,7 +99,11 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => navigation.replace("Login")}
+          onPress={async () => {
+            await AsyncStorage.removeItem("isLoggedIn");
+            await AsyncStorage.removeItem("user");
+            navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+          }}
         >
           <Text style={styles.logoutText}>Salir</Text>
           <Ionicons
