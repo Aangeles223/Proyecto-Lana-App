@@ -1,66 +1,75 @@
-import React, { useEffect, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import { useIsFocused } from "@react-navigation/native";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
+  Animated,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoLana from "../components/LogoLana";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import Constants from "expo-constants";
 
-export default function PagosFijosScreen({ navigation }) {
-  const [pagos, setPagos] = useState([]);
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
+
+const PagosFijosScreen = ({ navigation }) => {
+  const [pagosFijos, setPagosFijos] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
 
-  useFocusEffect(
-    useCallback(() => {
-      const fetchPagos = async () => {
-        setLoading(true);
-        try {
-          const userStr = await AsyncStorage.getItem("user");
-          const user = JSON.parse(userStr);
-
-          const res = await fetch(`http://172.20.10.6:3000/pagos-fijos/${user.id}`);
-          const data = await res.json();
-
-          if (data.success) {
-            setPagos(data.pagos);
-          } else {
-            console.error("Error desde API:", data);
+  // Function to fetch pagos fijos
+  const fetchPagos = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const { id: usuario_id } = JSON.parse(userStr);
+      const res = await fetch(`${BASE_URL}/pagos_fijos/usuario/${usuario_id}`);
+      const data = await res.json();
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data.success && data.pagos_fijos) {
+        list = data.pagos_fijos;
+      } else {
+        console.error("Error al obtener pagos fijos:", data);
+      }
+      // Compute next payment date and ensure monto is number
+      const computed = list.map((pago) => {
+        const dia = pago.dia_pago;
+        const hoy = new Date();
+        let mes = hoy.getMonth();
+        let anio = hoy.getFullYear();
+        if (dia < hoy.getDate()) {
+          mes += 1;
+          if (mes > 11) {
+            mes = 0;
+            anio += 1;
           }
-        } catch (error) {
-          console.error("Error al obtener pagos fijos:", error);
-        } finally {
-          setLoading(false);
         }
-      };
+        const fechaProxima = new Date(anio, mes, dia);
+        return {
+          ...pago,
+          monto: Number(pago.monto),
+          proximo: fechaProxima.toLocaleDateString(),
+        };
+      });
+      setPagosFijos(computed);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
+  // Refresh list on screen focus
+  useEffect(() => {
+    if (isFocused) {
       fetchPagos();
-    }, [])
-  );
-
-
-  const getIconoPorNombre = (nombre) => {
-    const lower = nombre.toLowerCase();
-    if (lower.includes("luz")) return <Ionicons name="flash" size={24} color="#43a047" />;
-    if (lower.includes("agua")) return <Ionicons name="water" size={24} color="#00bcd4" />;
-    if (lower.includes("renta") || lower.includes("alquiler"))
-      return <FontAwesome5 name="home" size={24} color="#1976d2" />;
-    if (lower.includes("escuela") || lower.includes("colegiatura"))
-      return <MaterialIcons name="school" size={24} color="#ab47bc" />;
-    return <Ionicons name="document-text-outline" size={24} color="#666" />;
-  };
-
-  const getColorFondo = (id) => {
-    const colores = ["#e0f7fa", "#f1f8e9", "#e3f2fd", "#f3e5f5", "#fce4ec"];
-    return colores[id % colores.length];
-  };
+    }
+  }, [isFocused]);
 
   return (
     <View style={styles.background}>
@@ -79,62 +88,69 @@ export default function PagosFijosScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-
       <View style={styles.topCard}>
         <Text style={styles.title}>Pagos fijos</Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#1976d2" />
-        ) : (
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-            {pagos.map((pago) => (
-              <TouchableOpacity
-                key={pago.id}
-                style={[styles.pagoCard, { backgroundColor: getColorFondo(pago.id) }]}
-                activeOpacity={0.9}
-                onPress={() => setExpandedId(expandedId === pago.id ? null : pago.id)}
-              >
-                <View style={styles.pagoRow}>
-                  {getIconoPorNombre(pago.nombre)}
-                  <View style={{ marginLeft: 12, flex: 1 }}>
-                    <Text style={styles.pagoNombre}>{pago.nombre}</Text>
-                    <Text style={styles.pagoMonto}>
-                      ${Number(pago.monto).toFixed(2)}
-                    </Text>
-
-                    <Text style={styles.pagoProximo}>
-                      Próximo pago: {new Date(pago.ultima_fecha).toLocaleDateString()}
-                    </Text>
-                  </View>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {(pagosFijos || []).map((pago) => (
+            <TouchableOpacity
+              key={pago.id}
+              style={[styles.pagoCard, { backgroundColor: pago.color }]}
+              activeOpacity={0.9}
+              onPress={() =>
+                setExpandedId(expandedId === pago.id ? null : pago.id)
+              }
+            >
+              <View style={styles.pagoRow}>
+                {pago.icon}
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={styles.pagoNombre}>{pago.nombre}</Text>
+                  <Text style={styles.pagoMonto}>${pago.monto.toFixed(2)}</Text>
+                  <Text style={styles.pagoProximo}>
+                    Próximo pago: {pago.proximo}
+                  </Text>
+                </View>
+                <View style={styles.iconsContainer}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditarPagoFijo", { pago })
+                    }
+                    style={styles.iconButton}
+                  >
+                    <Ionicons name="create-outline" size={20} color="#222" />
+                  </TouchableOpacity>
                   <Ionicons
-                    name={expandedId === pago.id ? "chevron-up" : "chevron-forward"}
+                    name={
+                      expandedId === pago.id ? "chevron-up" : "chevron-forward"
+                    }
                     size={24}
                     color="#222"
                   />
                 </View>
-
-                {expandedId === pago.id && (
-                  <View style={styles.detallePago}>
-                    <Text style={styles.detalleLabel}>Detalles del pago:</Text>
-                    <Text style={styles.detalleDato}>Nombre: {pago.nombre}</Text>
-                    <Text style={styles.detalleDato}>Monto: ${pago.monto}</Text>
-                    <Text style={styles.detalleDato}>Último pago: {new Date(pago.ultima_fecha).toLocaleDateString()}</Text>
-                    <Text style={styles.detalleDato}>
-                      Estado: {pago.pagado ? "Pagado" : "Pendiente"}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.editBtn}
-                      onPress={() => navigation.navigate("EditarPagoFijo", { pago })}
-                    >
-                      <Text style={styles.editBtnText}>Editar</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-
+              </View>
+              {expandedId === pago.id && (
+                <View style={styles.detallePago}>
+                  <Text style={styles.detalleLabel}>Detalles del pago:</Text>
+                  <Text style={styles.detalleDato}>Nombre: {pago.nombre}</Text>
+                  <Text style={styles.detalleDato}>Monto: ${pago.monto}</Text>
+                  <Text style={styles.detalleDato}>
+                    Próximo pago: {pago.proximo}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() =>
+                      navigation.navigate("EditarPagoFijo", { pago })
+                    }
+                  >
+                    <Text style={styles.editBtnText}>Editar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate("AgregarNuevoPago")}
@@ -144,7 +160,7 @@ export default function PagosFijosScreen({ navigation }) {
       </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   background: {
@@ -265,4 +281,13 @@ const styles = StyleSheet.create({
     fontFamily: "serif",
     fontWeight: "bold",
   },
+  iconsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconButton: {
+    marginLeft: 12,
+  },
 });
+
+export default PagosFijosScreen;

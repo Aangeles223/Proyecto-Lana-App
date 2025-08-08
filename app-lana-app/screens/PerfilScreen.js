@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
 
 const { width } = Dimensions.get("window");
 
@@ -24,67 +29,52 @@ export default function PerfilScreen({ navigation }) {
 
   // Cargar datos reales del usuario
   useEffect(() => {
-    const fetchUser = async () => {
+    const cargarPerfil = async () => {
       try {
         const userStr = await AsyncStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          setUserId(user.id);
-          // Obtener datos actualizados de la BD
-          const res = await fetch(`http://172.20.10.6:3000/usuario/${user.id}`);
-          const data = await res.json();
-          if (data.success && data.user) {
-            setNombre(data.user.nombre);
-            setApellidos(data.user.apellidos);
-            setCorreo(data.user.email);
-            setTelefono(data.user.telefono || "");
-          }
-        }
+        const user = JSON.parse(userStr);
+        // Mostrar datos almacenados localmente inmediatamente
+        setNombre(user.nombre);
+        setApellidos(user.apellidos);
+        setCorreo(user.email || user.correo);
+        setTelefono(user.telefono);
+        setUserId(user.id);
+        const res = await fetch(`${BASE_URL}/usuario/${user.id}`);
+        const data = await res.json();
+        // Ajustar según respuesta proxy
+        const perfil = data.success && data.user ? data.user : data;
+        setNombre(perfil.nombre);
+        setApellidos(perfil.apellidos);
+        setCorreo(perfil.email || perfil.correo || perfil.email);
+        setTelefono(perfil.telefono);
       } catch (e) {
-        Alert.alert("Error", "No se pudo cargar el perfil.");
+        console.error(e);
       }
     };
-    fetchUser();
+    cargarPerfil();
   }, []);
 
-  // Guardar cambios en la BD y en AsyncStorage
+  // Guardar cambios en la API y AsyncStorage
   const guardarCambios = async () => {
     try {
-      const res = await fetch(`http://172.20.10.6:3000/usuario/${userId}`, {
+      const body = { nombre, apellidos, email: correo, telefono };
+      const res = await fetch(`${BASE_URL}/usuario/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre,
-          apellidos,
-          email: correo,
-          telefono,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (data.success) {
-        // Actualiza AsyncStorage
-        const userStr = await AsyncStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          const updatedUser = {
-            ...user,
-            nombre,
-            apellidos,
-            email: correo,
-            telefono,
-          };
-          await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-        }
-        setEditando(false);
-        Alert.alert("Éxito", "Perfil actualizado correctamente.");
+      if (data.success && data.user) {
+        // Actualizar AsyncStorage con usuario actualizado
+        await AsyncStorage.setItem("user", JSON.stringify(data.user));
+        Alert.alert("Éxito", "Perfil actualizado", [
+          { text: "OK", onPress: () => setEditando(false) },
+        ]);
       } else {
-        Alert.alert(
-          "Error",
-          data.message || "No se pudo actualizar el perfil."
-        );
+        Alert.alert("Error", "No se pudo guardar los cambios");
       }
     } catch (e) {
-      Alert.alert("Error", "No se pudo actualizar el perfil.");
+      Alert.alert("Error", e.message);
     }
   };
 

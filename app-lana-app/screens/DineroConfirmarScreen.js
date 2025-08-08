@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import {
   Ionicons,
   FontAwesome5,
@@ -7,86 +7,59 @@ import {
 } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarDineroConfirmarScreen({ navigation, route }) {
-  const {
-    usuario_id,
-    monto,
-    metodo,
-    icon,
-    extra,
-    categoria_id = null,
-    tipo = "ingreso",
-    descripcion = "Depósito",
-  } = route.params;
+  const { monto, metodo, icon, extra } = route.params;
 
   const handleConfirmar = async () => {
     try {
-      const response = await fetch("http://172.20.10.6:3000/transacciones", {
+      // Crear transacción de ingreso
+      const userStr = await AsyncStorage.getItem("user");
+      const { id: usuario_id } = JSON.parse(userStr);
+      const fecha = new Date().toISOString().split("T")[0];
+      await fetch(`${BASE_URL}/transacciones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           usuario_id,
-          tipo,
-          categoria_id,
-          monto,
-          fecha: new Date().toISOString().split("T")[0], // yyyy-mm-dd
-          descripcion,
+          categoria_id: null, // ajusta si necesitas una categoría específica
+          monto: Number(monto),
+          tipo: "ingreso",
+          fecha,
         }),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        Alert.alert("Error", "No se pudo registrar la transacción.");
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Depósito exitoso",
-            body: `Se depositaron $${monto} a tu cuenta.`,
-            sound: true,
-          },
-          trigger: null,
-        });
-
-        // Aquí muestra el alert de éxito
-        Alert.alert(
-          "Transacción exitosa",
-          `Se registró el depósito de $${monto} correctamente.`,
-          [
-            {
-              text: "Aceptar",
-              onPress: () => navigation.replace("MainTabs", { screen: "Menu" }),
-            },
-          ],
-          { cancelable: false }
-        );
-
-      } else {
-        Alert.alert("Error", "No se pudo registrar la transacción.");
-      }
-    } catch (error) {
-      console.error("Error al registrar transacción:", error);
-      Alert.alert("Error", "Ocurrió un error al registrar la transacción.");
+    } catch (e) {
+      console.error(e);
     }
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Depósito exitoso",
+        body: `Se depositaron $${monto} a tu cuenta.`,
+        sound: true,
+      },
+      trigger: null,
+    });
+    navigation.replace("MainTabs", { screen: "Menu" });
   };
-
 
   let MetodoIcon = null;
   if (icon === "cc-visa")
     MetodoIcon = <FontAwesome5 name="cc-visa" size={32} color="#1976d2" />;
-  else if (icon === "bank-transfer")
+  if (icon === "bank-transfer")
     MetodoIcon = (
       <MaterialCommunityIcons name="bank-transfer" size={32} color="#388e3c" />
     );
-  else if (icon === "cash")
-    MetodoIcon = <MaterialCommunityIcons name="cash" size={32} color="#388e3c" />;
-  else if (icon === "dots-horizontal")
+  if (icon === "cash")
+    MetodoIcon = (
+      <MaterialCommunityIcons name="cash" size={32} color="#388e3c" />
+    );
+  if (icon === "dots-horizontal")
     MetodoIcon = (
       <MaterialCommunityIcons name="dots-horizontal" size={32} color="#888" />
     );
@@ -102,14 +75,16 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
         <View style={{ flex: 2, alignItems: "center" }}>
           <LogoLana />
         </View>
-        <View style={{ flex: 1 }} />
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          {/* Si quieres una campana aquí, agrégala. Si no, deja vacío */}
+        </View>
       </View>
-
+      {/* Contenido centrado */}
       <View style={styles.centerContent}>
         <Text style={styles.title}>Agregar dinero</Text>
         <Text style={styles.monto}>${monto}</Text>
         <Text style={styles.confirmar}>Confirmar Pago</Text>
-        <Text style={styles.label}>Método de pago</Text>
+        <Text style={styles.label}>Metodo de pago</Text>
         <View style={styles.metodoRow}>
           {MetodoIcon}
           <Text style={styles.metodoText}>
@@ -117,14 +92,18 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
           </Text>
         </View>
       </View>
-
+      {/* Botón Confirmar y Salir abajo */}
       <View style={styles.bottomArea}>
         <TouchableOpacity style={styles.button} onPress={handleConfirmar}>
           <Text style={styles.buttonText}>Confirmar</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => navigation.replace("Login")}
+          onPress={async () => {
+            await AsyncStorage.removeItem("isLoggedIn");
+            await AsyncStorage.removeItem("user");
+            navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+          }}
         >
           <Text style={styles.logoutText}>Salir</Text>
           <Ionicons

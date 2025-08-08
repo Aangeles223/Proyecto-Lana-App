@@ -1,26 +1,60 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import {
   Ionicons,
   FontAwesome5,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarDineroMetodoScreen({ navigation, route }) {
-  const { monto, usuario_id } = route.params;
+  const { monto } = route.params;
 
-  const navegarConfirmar = (metodo, icon, extra = "") => {
-    navigation.navigate("AgregarDineroConfirmar", {
-      monto,
-      usuario_id,
-      metodo,
-      icon,
-      extra,
-      categoria_id: null,
-      tipo: "ingreso",
-      descripcion: null,
-    });
+  // Función para crear transacción en la API y luego navegar
+  const handleMetodo = async (metodo, icon, extra) => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userStr);
+      const body = {
+        usuario_id: user.id,
+        categoria_id: 1, // ajusta categoría según tu lógica
+        monto: Number(monto),
+        tipo: "ingreso",
+        fecha: new Date().toISOString().split("T")[0],
+        descripcion: `Ingreso por ${metodo}${extra ? " (" + extra + ")" : ""}`,
+      };
+      const res = await fetch(`${BASE_URL}/transacciones`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        navigation.navigate("AgregarDineroConfirmar", {
+          monto,
+          metodo,
+          icon,
+          extra,
+        });
+      } else {
+        alert("Error al registrar el ingreso");
+      }
+    } catch (e) {
+      alert("Error de conexión");
+    }
+  };
+
+  // Logout: limpiar sesión y reset a Login
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("isLoggedIn");
+    await AsyncStorage.removeItem("user");
+    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   };
 
   return (
@@ -36,13 +70,12 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
         </View>
         <View style={{ flex: 1 }} />
       </View>
-
+      {/* Contenido centrado */}
       <View style={styles.centerContent}>
         <Text style={styles.title}>Agregar dinero</Text>
-
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() => navegarConfirmar("Tarjeta", "cc-visa", "Visa 7764")}
+          onPress={() => handleMetodo("Tarjeta", "cc-visa", "Visa 7764")}
         >
           <FontAwesome5
             name="cc-visa"
@@ -52,10 +85,9 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Tarjeta</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() => navegarConfirmar("Transferencia", "bank-transfer")}
+          onPress={() => handleMetodo("Transferencia", "bank-transfer", "")}
         >
           <MaterialCommunityIcons
             name="bank-transfer"
@@ -65,10 +97,9 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Transferencia</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() => navegarConfirmar("Efectivo", "cash")}
+          onPress={() => handleMetodo("Efectivo", "cash", "")}
         >
           <MaterialCommunityIcons
             name="cash"
@@ -78,10 +109,9 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Efectivo</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() => navegarConfirmar("Otro", "dots-horizontal")}
+          onPress={() => handleMetodo("Otro", "dots-horizontal", "")}
         >
           <MaterialCommunityIcons
             name="dots-horizontal"
@@ -92,12 +122,9 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           <Text style={styles.metodoText}>Otro</Text>
         </TouchableOpacity>
       </View>
-
+      {/* Botón Salir abajo */}
       <View style={styles.bottomArea}>
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={() => navigation.replace("Login")}
-        >
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>Salir</Text>
           <Ionicons
             name="arrow-forward"

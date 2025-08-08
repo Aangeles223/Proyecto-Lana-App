@@ -9,6 +9,7 @@ import PrincipalScreen from "./screens/PrincipalScreen";
 import AyudaScreen from "./screens/AyudaScreen";
 import MenuScreen from "./screens/MenuScreen";
 import { MaterialIcons, Feather, Entypo } from "@expo/vector-icons";
+import TransaccionesScreen from "./screens/TransaccionesScreen";
 import PerfilScreen from "./screens/PerfilScreen";
 import DineroMontoScreen from "./screens/DineroMontoScreen";
 import DineroMetodoScreen from "./screens/DineroMetodoScreen";
@@ -148,6 +149,10 @@ export default function App() {
             <Stack.Screen
               name="AgregarDineroConfirmar"
               component={DineroConfirmarScreen}
+            />
+            <Stack.Screen
+              name="Transacciones"
+              component={TransaccionesScreen}
             />
           </>
         ) : (

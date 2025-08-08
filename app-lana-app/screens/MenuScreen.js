@@ -16,6 +16,11 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
 
 export default function MenuScreen({ navigation, onLogout }) {
   const [user, setUser] = useState(null);
@@ -28,9 +33,7 @@ export default function MenuScreen({ navigation, onLogout }) {
         if (userStr) {
           const userObj = JSON.parse(userStr);
           // (Opcional) Refresca datos desde la BD
-          const res = await fetch(
-            `http://172.20.10.6:3000/usuario/${userObj.id}`
-          );
+          const res = await fetch(`${BASE_URL}/usuario/${userObj.id}`);
           const data = await res.json();
           if (data.success && data.user) {
             setUser(data.user);

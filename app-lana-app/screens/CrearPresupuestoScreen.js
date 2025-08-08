@@ -13,6 +13,11 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoLana from "../components/LogoLana";
+import Constants from "expo-constants";
+
+// Determina host según Expo debuggerHost o IP fija
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
 
 export default function CrearPresupuestoScreen({ navigation }) {
   const [monto, setMonto] = useState("");
@@ -22,11 +27,16 @@ export default function CrearPresupuestoScreen({ navigation }) {
 
   useEffect(() => {
     const fetchCategorias = async () => {
-      const res = await fetch("http://172.20.10.6:3000/categorias");
-      const data = await res.json();
-      if (data.success) {
-        setCategorias(data.categorias);
-        if (data.categorias.length > 0) setCategoria(data.categorias[0].id);
+      try {
+        const res = await fetch(`${BASE_URL}/categorias`);
+        const data = await res.json();
+        // data is an array of categories
+        const list = Array.isArray(data) ? data : data.categorias || [];
+        setCategorias(list);
+        if (list.length > 0) setCategoria(list[0].id);
+      } catch (e) {
+        console.error("Error fetch categorias en CrearPresupuestoScreen:", e);
+        setCategorias([]);
       }
     };
     fetchCategorias();
@@ -43,7 +53,7 @@ export default function CrearPresupuestoScreen({ navigation }) {
     let mes = fecha.getMonth() + 1;
     let anio = fecha.getFullYear();
 
-    const res = await fetch("http://10.0.0.11:3000/presupuestos", {
+    const res = await fetch(`${BASE_URL}/presupuestos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -55,7 +65,7 @@ export default function CrearPresupuestoScreen({ navigation }) {
       }),
     });
     const data = await res.json();
-    if (data.success) {
+    if (data.id) {
       navigation.goBack();
     } else {
       Alert.alert("Error", "No se pudo agregar el presupuesto.");

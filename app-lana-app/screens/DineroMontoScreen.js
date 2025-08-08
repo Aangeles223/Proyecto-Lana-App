@@ -1,50 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  Image,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Determinar base URL (no usado aquí pero preparado para futuras llamadas API)
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarDineroMontoScreen({ navigation }) {
   const [monto, setMonto] = useState("");
-  const [usuarioId, setUsuarioId] = useState(null);
-
-  useEffect(() => {
-    const obtenerUsuario = async () => {
-      try {
-        const userStr = await AsyncStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          setUsuarioId(user.id);
-        } else {
-          Alert.alert("Error", "No se encontró usuario guardado.");
-        }
-      } catch (error) {
-        console.error("Error obteniendo usuario:", error);
-        Alert.alert("Error", "No se pudo cargar información de usuario.");
-      }
-    };
-    obtenerUsuario();
-  }, []);
-
-  const handleContinuar = () => {
-    const montoNum = parseFloat(monto);
-    if (!usuarioId) {
-      Alert.alert("Error", "No se pudo obtener el usuario. Intenta de nuevo.");
-      return;
-    }
-    if (!monto || isNaN(montoNum) || montoNum <= 0) {
-      Alert.alert("Error", "Ingresa un monto válido mayor a 0.");
-      return;
-    }
-    navigation.navigate("AgregarDineroMetodo", { monto: montoNum, usuario_id: usuarioId });
-  };
 
   return (
     <View style={styles.background}>
@@ -59,7 +32,7 @@ export default function AgregarDineroMontoScreen({ navigation }) {
         </View>
         <View style={{ flex: 1 }} />
       </View>
-
+      {/* Contenido centrado */}
       <View style={styles.centerContent}>
         <Text style={styles.title}>Agregar dinero</Text>
         <Text style={styles.label}>Ingresa el monto</Text>
@@ -72,17 +45,15 @@ export default function AgregarDineroMontoScreen({ navigation }) {
           placeholderTextColor="#bdbdbd"
         />
         <TouchableOpacity
-          style={[
-            styles.button,
-            (!usuarioId || !monto || parseFloat(monto) <= 0) && styles.buttonDisabled,
-          ]}
-          onPress={handleContinuar}
-          disabled={!usuarioId || !monto || parseFloat(monto) <= 0}
+          style={styles.button}
+          onPress={() =>
+            monto && navigation.navigate("AgregarDineroMetodo", { monto })
+          }
         >
           <Text style={styles.buttonText}>Continuar</Text>
         </TouchableOpacity>
       </View>
-
+      {/* Botón Salir abajo */}
       <View style={styles.bottomArea}>
         <TouchableOpacity
           style={styles.logoutBtn}
@@ -154,9 +125,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: 200,
     alignItems: "center",
-  },
-  buttonDisabled: {
-    backgroundColor: "#a0a0a0",
   },
   buttonText: { color: "#222", fontSize: 18, fontFamily: "serif" },
   bottomArea: {
