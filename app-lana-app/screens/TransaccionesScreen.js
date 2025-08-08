@@ -16,8 +16,8 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 // Detección automática de host para ambos servicios
 let devHost;
-if (Platform.OS === "android") devHost = "10.0.2.2";
-else if (Platform.OS === "ios") devHost = "localhost";
+if (Platform.OS === "android") devHost = "10.16.36.167";
+else if (Platform.OS === "ios") devHost = "10.16.36.167";
 else {
   const debuggerHost = Constants.manifest?.debuggerHost;
   devHost = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -64,7 +64,12 @@ export default function TransaccionesScreen({ navigation }) {
         return;
       } catch (e2) {
         console.error("Error al cargar historial completo:", e2);
-        Alert.alert("Error", `No se pudo cargar el historial: ${e2.message}`);
+        Alert.alert(
+          "Error al cargar historial",
+          `No se pudo cargar el historial: ${e2.message}. ` +
+            "Asegúrate de ejecutar `npm run start:proxy` y tener la API FastAPI en http://" +
+            `${devHost}:8000`
+        );
       }
     } finally {
       setRefreshing(false);
