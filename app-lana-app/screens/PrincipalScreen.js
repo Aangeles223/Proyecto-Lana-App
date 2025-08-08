@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -15,38 +16,61 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+// Determina host y base URL para API proxy
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
 export default function PrincipalScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
   const [saldo, setSaldo] = useState(0);
   const [transacciones, setTransacciones] = useState([]);
 
-  useEffect(() => {
-    const getUserAndData = async () => {
-      try {
-        const userStr = await AsyncStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          setNombre(user.nombre);
-
-          // Obtener saldo y transacciones del backend
-          const res = await fetch(
-            `http://10.0.0.11:3000/usuario/${user.id}/resumen`
-          );
-          const data = await res.json();
-          if (data.success) {
-            setSaldo(data.saldo);
-            setTransacciones(data.transacciones);
-          }
-        }
-      } catch (e) {
-        setNombre("");
-        setSaldo(0);
-        setTransacciones([]);
+  // Cargar usuario y transacciones
+  const getUserAndData = async () => {
+    try {
+      // Obtener usuario de AsyncStorage
+      const userStr = await AsyncStorage.getItem("user");
+      if (!userStr) return;
+      // Parsear usuario y normalizar identificador
+      const parsedUser = JSON.parse(userStr);
+      const userId =
+        parsedUser.id || parsedUser.usuario_id || parsedUser.id_usuario;
+      if (!userId) {
+        console.warn(
+          "PrincipalScreen: userId indefinido en AsyncStorage",
+          parsedUser
+        );
+        return;
       }
-    };
-    getUserAndData();
-  }, []);
+      setNombre(parsedUser.nombre);
+      // Obtener historial de transacciones de la API
+      const res = await fetch(`${BASE_URL}/transacciones/historial/${userId}`);
+      let history;
+      try {
+        history = await res.json();
+      } catch (e) {
+        const text = await res.text();
+        console.error("Error parseando historial, respuesta no JSON:", text);
+        return;
+      }
+      if (Array.isArray(history)) {
+        setTransacciones(history);
+        // Calcular saldo sumando cantidades
+        const total = history.reduce((sum, t) => sum + (t.monto || 0), 0);
+        setSaldo(total);
+      }
+    } catch (e) {
+      console.error("Error cargando datos iniciales:", e);
+    }
+  };
+
+  // Refrescar cada vez que la pantalla recibe foco
+  useFocusEffect(
+    React.useCallback(() => {
+      getUserAndData();
+    }, [])
+  );
 
   return (
     <LinearGradient colors={["#7fd8f7", "#e0f7fa"]} style={{ flex: 1 }}>

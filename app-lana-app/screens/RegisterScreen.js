@@ -7,12 +7,18 @@ import {
   Image,
   StyleSheet,
   Dimensions,
+  Platform,
 } from "react-native";
+import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import LogoLana from "../components/LogoLana";
 import { FontAwesome, MaterialIcons, Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
+// Determina host en función de Expo debuggerHost (localhost, emulador o LAN) o IP fija de tu PC
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
+// console.log(`Base URL: ${BASE_URL}`);
 
 export default function RegisterScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
@@ -24,33 +30,41 @@ export default function RegisterScreen({ navigation }) {
   const [success, setSuccess] = useState("");
 
   const handleRegister = async () => {
-    setError("");
-    setSuccess("");
-    if (!nombre || !apellidos || !telefono || !email || !contrasena) {
-      setError("Todos los campos son obligatorios");
-      return;
-    }
     try {
-      const response = await fetch("http://10.0.0.11:3000/register", {
+      console.log("Register URL:", `${BASE_URL}/register`);
+      console.log("Register payload:", {
+        nombre,
+        apellidos,
+        telefono,
+        email,
+        contrasena,
+      });
+      const res = await fetch(`${BASE_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre,
           apellidos,
+          telefono,
           email,
           contrasena,
-          telefono,
         }),
       });
-      const data = await response.json();
-      if (data.success) {
-        setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
-        setTimeout(() => navigation.navigate("Login"), 1500);
+      console.log("Response status:", res.status);
+      const data = await res.json();
+      console.log("Response data:", data);
+      if (res.ok && data.id) {
+        setSuccess("Registro exitoso. Por favor inicia sesión.");
+        setError("");
+        navigation.navigate("Login");
       } else {
-        setError(data.message || "Error al registrar");
+        setError(data.error || "Error al registrar usuario");
+        setSuccess("");
       }
     } catch (e) {
-      setError("Error de conexión con el servidor");
+      console.error("Register error:", e);
+      setError("Error de conexión");
+      setSuccess("");
     }
   };
 

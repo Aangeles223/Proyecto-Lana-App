@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useIsFocused } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -8,46 +9,67 @@ import {
   Animated,
   Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoLana from "../components/LogoLana";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import Constants from "expo-constants";
 
-const pagosEjemplo = [
-  {
-    id: 1,
-    nombre: "Renta",
-    monto: 1500,
-    proximo: "5 jun.",
-    icon: <FontAwesome5 name="home" size={24} color="#1976d2" />,
-    color: "#e0f7fa",
-  },
-  {
-    id: 2,
-    nombre: "Luz",
-    monto: 150,
-    proximo: "30 May.",
-    icon: <Ionicons name="flash" size={24} color="#43a047" />,
-    color: "#f1f8e9",
-  },
-  {
-    id: 3,
-    nombre: "Agua",
-    monto: 250,
-    proximo: "12 jun.",
-    icon: <Ionicons name="water" size={24} color="#00bcd4" />,
-    color: "#e3f2fd",
-  },
-  {
-    id: 4,
-    nombre: "Escuela",
-    monto: 4423,
-    proximo: "5 Ago.",
-    icon: <MaterialIcons name="school" size={24} color="#ab47bc" />,
-    color: "#f3e5f5",
-  },
-];
+// Determinar base URL
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
-export default function PagosFijosScreen({ navigation }) {
+const PagosFijosScreen = ({ navigation }) => {
+  const [pagosFijos, setPagosFijos] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
+  const isFocused = useIsFocused();
+
+  // Function to fetch pagos fijos
+  const fetchPagos = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const { id: usuario_id } = JSON.parse(userStr);
+      const res = await fetch(`${BASE_URL}/pagos_fijos/usuario/${usuario_id}`);
+      const data = await res.json();
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data.success && data.pagos_fijos) {
+        list = data.pagos_fijos;
+      } else {
+        console.error("Error al obtener pagos fijos:", data);
+      }
+      // Compute next payment date and ensure monto is number
+      const computed = list.map((pago) => {
+        const dia = pago.dia_pago;
+        const hoy = new Date();
+        let mes = hoy.getMonth();
+        let anio = hoy.getFullYear();
+        if (dia < hoy.getDate()) {
+          mes += 1;
+          if (mes > 11) {
+            mes = 0;
+            anio += 1;
+          }
+        }
+        const fechaProxima = new Date(anio, mes, dia);
+        return {
+          ...pago,
+          monto: Number(pago.monto),
+          proximo: fechaProxima.toLocaleDateString(),
+        };
+      });
+      setPagosFijos(computed);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Refresh list on screen focus
+  useEffect(() => {
+    if (isFocused) {
+      fetchPagos();
+    }
+  }, [isFocused]);
 
   return (
     <View style={styles.background}>
@@ -72,7 +94,7 @@ export default function PagosFijosScreen({ navigation }) {
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         >
-          {pagosEjemplo.map((pago) => (
+          {(pagosFijos || []).map((pago) => (
             <TouchableOpacity
               key={pago.id}
               style={[styles.pagoCard, { backgroundColor: pago.color }]}
@@ -90,13 +112,23 @@ export default function PagosFijosScreen({ navigation }) {
                     Próximo pago: {pago.proximo}
                   </Text>
                 </View>
-                <Ionicons
-                  name={
-                    expandedId === pago.id ? "chevron-up" : "chevron-forward"
-                  }
-                  size={24}
-                  color="#222"
-                />
+                <View style={styles.iconsContainer}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditarPagoFijo", { pago })
+                    }
+                    style={styles.iconButton}
+                  >
+                    <Ionicons name="create-outline" size={20} color="#222" />
+                  </TouchableOpacity>
+                  <Ionicons
+                    name={
+                      expandedId === pago.id ? "chevron-up" : "chevron-forward"
+                    }
+                    size={24}
+                    color="#222"
+                  />
+                </View>
               </View>
               {expandedId === pago.id && (
                 <View style={styles.detallePago}>
@@ -128,7 +160,7 @@ export default function PagosFijosScreen({ navigation }) {
       </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   background: {
@@ -249,4 +281,13 @@ const styles = StyleSheet.create({
     fontFamily: "serif",
     fontWeight: "bold",
   },
+  iconsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconButton: {
+    marginLeft: 12,
+  },
 });
+
+export default PagosFijosScreen;

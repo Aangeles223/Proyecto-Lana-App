@@ -15,6 +15,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import jwt_decode from "jwt-decode";
+import Constants from "expo-constants";
+
+// Determina host en función de Expo debuggerHost (localhost, emulador o LAN) o IP fija de tu PC
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
 const { width, height } = Dimensions.get("window");
 
@@ -26,7 +32,11 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
   const handleLogin = async () => {
     setError("");
     try {
-      const response = await fetch("http://10.0.0.11:3000/login", {
+      console.log("Login URL:", `${BASE_URL}/login`, "Payload:", {
+        email,
+        contrasena: password,
+      });
+      const response = await fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -35,14 +45,53 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
         }),
       });
       const data = await response.json();
-      if (data.success) {
+      console.log("Login response data:", data, "response.ok:", response.ok);
+      if (response.ok) {
+        // Limpiar datos viejos antes de guardar nuevos
+        await AsyncStorage.removeItem("user");
         await AsyncStorage.setItem("isLoggedIn", "true");
-        await AsyncStorage.setItem("user", JSON.stringify(data.user)); // Guarda el usuario
+        // Decodificar el token para extraer usuario_id
+        let userId;
+        if (data.access_token) {
+          try {
+            const decoded = jwt_decode(data.access_token);
+            userId = decoded.usuario_id;
+          } catch (e) {
+            console.warn("Error decoding JWT:", e);
+          }
+        }
+        // Si no vino en token, buscar en data.user/data.usuario
+        const basicObj = data.user || data.usuario || data;
+        userId =
+          userId || basicObj.id || basicObj.usuario_id || basicObj.id_usuario;
+        // Obtener perfil completo del usuario
+        let profile = basicObj;
+        try {
+          const profRes = await fetch(`${BASE_URL}/usuario/${userId}`);
+          if (profRes.ok) profile = await profRes.json();
+        } catch (e) {
+          console.warn("Error fetching perfil:", e);
+        }
+        const normalizedUser = {
+          ...profile,
+          id: userId,
+          access_token: data.access_token,
+          token_type: data.token_type,
+        };
+        console.log("Storing user profile with token:", normalizedUser);
+        await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
+        // Verificar AsyncStorage inmediatamente
+        const stored = await AsyncStorage.getItem("user");
+        console.log("AsyncStorage 'user':", stored);
+        // Marcar usuario autenticado para mostrar navegación protegida
         setIsLoggedIn(true);
       } else {
-        setError(data.message || "Correo o contraseña incorrectos");
+        setError(
+          data.detail || data.message || "Correo o contraseña incorrectos"
+        );
       }
     } catch (e) {
+      console.error("Login fetch error:", e);
       setError("Error de conexión con el servidor");
     }
   };

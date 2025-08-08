@@ -7,11 +7,31 @@ import {
 } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import LogoLana from "../components/LogoLana";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AgregarDineroConfirmarScreen({ navigation, route }) {
   const { monto, metodo, icon, extra } = route.params;
 
   const handleConfirmar = async () => {
+    try {
+      // Crear transacción de ingreso
+      const userStr = await AsyncStorage.getItem("user");
+      const { id: usuario_id } = JSON.parse(userStr);
+      const fecha = new Date().toISOString().split("T")[0];
+      await fetch("http://10.0.0.11:3000/transacciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id,
+          categoria_id: null,
+          monto: Number(monto),
+          tipo: "ingreso",
+          fecha,
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Depósito exitoso",

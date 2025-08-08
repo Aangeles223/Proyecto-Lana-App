@@ -4,18 +4,34 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
   Platform,
   Alert,
   KeyboardAvoidingView,
-  ScrollView,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import jwt_decode from "jwt-decode";
+import Constants from "expo-constants";
 import { Picker } from "@react-native-picker/picker";
+
+// Determina host según Expo debuggerHost o IP fija
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
+
+// Mapeo de nombres de categoría a iconos
+const categoryIconMap = {
+  Comida: { component: MaterialIcons, name: "restaurant" },
+  Transporte: { component: Ionicons, name: "car" },
+  Salud: { component: FontAwesome5, name: "heartbeat" },
+  Entretenimiento: { component: MaterialIcons, name: "movie" },
+  Hogar: { component: MaterialIcons, name: "home" },
+  Default: { component: MaterialIcons, name: "category" },
+};
 
 export default function AgregarTransaccionScreen({ navigation }) {
   const [monto, setMonto] = useState("");
@@ -30,13 +46,22 @@ export default function AgregarTransaccionScreen({ navigation }) {
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const res = await fetch("http://10.0.0.11:3000/categorias");
-        const data = await res.json();
-        if (data.success) {
-          setCategorias(data.categorias);
-          if (data.categorias.length > 0) setCategoria(data.categorias[0].id);
+        const res = await fetch(`${BASE_URL}/categorias`);
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (parseErr) {
+          console.error("Raw /categorias response (no JSON):", text);
+          return;
         }
+        console.log("Fetch /categorias, datos recibidos:", data);
+        // Puede devolver array directo o { success, categorias }
+        const list = Array.isArray(data) ? data : data.categorias || [];
+        setCategorias(list);
+        if (list.length > 0) setCategoria(list[0].id);
       } catch (e) {
+        console.error("Error fetch categorias:", e);
         setCategorias([]);
       }
     };
@@ -49,38 +74,54 @@ export default function AgregarTransaccionScreen({ navigation }) {
       return;
     }
     try {
+      // Obtener usuario actual y normalizar identificador
       const userStr = await AsyncStorage.getItem("user");
-      const user = JSON.parse(userStr);
-
-      const res = await fetch("http://10.0.0.11:3000/transacciones", {
+      const parsedUser = JSON.parse(userStr);
+      // Normalizar identificador: primero id, luego token
+      let usuario_id =
+        parsedUser.id || parsedUser.usuario_id || parsedUser.id_usuario;
+      if (!usuario_id && parsedUser.access_token) {
+        try {
+          const decoded = jwt_decode(parsedUser.access_token);
+          usuario_id = decoded.usuario_id || decoded.user_id;
+        } catch (e) {
+          console.warn("Error decoding token en AgregarTransacción:", e);
+        }
+      }
+      console.log("AgregarTransacción - usuario id:", usuario_id);
+      // Formatear fecha a YYYY-MM-DD
+      const fechaStr = fecha.toISOString().split("T")[0];
+      // Construir payload y enviar transacción a la API
+      const payload = {
+        usuario_id,
+        categoria_id: categoria,
+        monto: Number(monto), // renombrado para coincidir con API
+        tipo,
+        fecha: fechaStr,
+        descripcion,
+      };
+      console.log("AgregarTransacción - payload:", payload);
+      const res = await fetch(`${BASE_URL}/transacciones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuario_id: user.id,
-          tipo,
-          categoria_id: categoria,
-          monto: Number(monto),
-          fecha: fecha.toISOString().slice(0, 10),
-          descripcion,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-
-      if (data.success) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Transacción completada",
-            body: `Transacción registrada: $${monto}.`,
-            sound: true,
-          },
-          trigger: null,
-        });
-        navigation.goBack();
-      } else {
+      if (data.success === false) {
         Alert.alert("Error", "No se pudo agregar la transacción.");
+        return;
       }
+      // Programar notificación local
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Transacción agregada",
+          body: `${tipo} de ${monto} registrado.`,
+        },
+        trigger: { seconds: 2 },
+      });
+      navigation.goBack();
     } catch (e) {
-      Alert.alert("Error", "No se pudo conectar al servidor.");
+      Alert.alert("Error", e.message);
     }
   };
 
@@ -146,27 +187,42 @@ export default function AgregarTransaccionScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
           </View>
-          {/* Picker de Categoría */}
-          <View style={styles.pickerContainer}>
-            <MaterialIcons
-              name="category"
-              size={24}
-              color="#43a047"
-              style={{ marginRight: 8 }}
-            />
-            <View style={styles.pickerBox}>
-              <Picker
-                selectedValue={categoria}
-                style={styles.picker}
-                onValueChange={(itemValue) => setCategoria(itemValue)}
-                dropdownIconColor="#1976d2"
-              >
-                {categorias.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.nombre} value={cat.id} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          {/* Selector de Categoría mejorado */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScroll}
+          >
+            {categorias.map((cat) => {
+              const { component: Icon, name: iconName } =
+                categoryIconMap[cat.nombre] || categoryIconMap.Default;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    styles.categoryBtn,
+                    categoria === cat.id && styles.categoryBtnActive,
+                  ]}
+                  onPress={() => setCategoria(cat.id)}
+                >
+                  <Icon
+                    name={iconName}
+                    size={16}
+                    color={categoria === cat.id ? "#fff" : "#222"}
+                    style={styles.categoryIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      categoria === cat.id && styles.categoryTextActive,
+                    ]}
+                  >
+                    {cat.nombre}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
           {/* Fecha */}
           <TouchableOpacity
             style={styles.selectRow}
@@ -226,10 +282,20 @@ const styles = StyleSheet.create({
   },
   centerContent: {
     flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 20,
     alignItems: "center",
     justifyContent: "flex-start",
-    marginTop: 10,
-    paddingHorizontal: 10,
+    // Shadow Android
+    elevation: 3,
+    // Shadow iOS
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
   title: {
     fontSize: 28,
@@ -280,27 +346,34 @@ const styles = StyleSheet.create({
   tipoBtnTextActivo: {
     color: "#fff",
   },
-  pickerContainer: {
+  // Scroll horizontal para categorías
+  categoriesScroll: {
+    paddingVertical: 8,
+    marginVertical: 16,
+  },
+  categoryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: "#e6f7fa",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#43a047",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginBottom: 16,
-    width: 260,
   },
-  pickerBox: {
-    flex: 1,
-    justifyContent: "center",
+  categoryBtnActive: {
+    backgroundColor: "#43a047",
   },
-  picker: {
-    width: "100%",
+  categoryText: {
     color: "#222",
     fontSize: 16,
-    backgroundColor: "#fff",
+    marginLeft: 8,
+  },
+  categoryTextActive: {
+    color: "#fff",
+  },
+  categoryIcon: {
+    width: 24,
+    height: 24,
   },
   selectRow: {
     flexDirection: "row",
