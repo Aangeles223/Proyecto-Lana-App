@@ -28,7 +28,7 @@ const API_URL_FASTAPI = `http://${devHost}:8000`; // FastAPI direct
 export default function TransaccionesScreen({ navigation }) {
   const [transacciones, setTransacciones] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("Todos");
 
   const loadHistory = async () => {
     try {
@@ -89,24 +89,18 @@ export default function TransaccionesScreen({ navigation }) {
     const now = new Date();
     return transacciones.filter((t) => {
       const d = new Date(t.fecha);
+      const diffDays = (now - d) / (1000 * 60 * 60 * 24);
       switch (filter) {
-        case "Day":
-          return (
-            d.getFullYear() === now.getFullYear() &&
-            d.getMonth() === now.getMonth() &&
-            d.getDate() === now.getDate()
-          );
-        case "Week":
-          return (now - d) / (1000 * 60 * 60 * 24) < 7;
-        case "Month":
-          return (
-            d.getFullYear() === now.getFullYear() &&
-            d.getMonth() === now.getMonth()
-          );
-        case "Year":
-          return d.getFullYear() === now.getFullYear();
+        case "Día":
+          return diffDays < 1;
+        case "Semana":
+          return diffDays < 7;
+        case "Mes":
+          return diffDays < 30;
+        case "Año":
+          return diffDays < 365;
         default:
-          return true;
+          return true; // "Todos"
       }
     });
   }, [transacciones, filter]);
@@ -143,7 +137,7 @@ export default function TransaccionesScreen({ navigation }) {
         </TouchableOpacity>
       </View>
       <View style={styles.filterRow}>
-        {["All", "Day", "Week", "Month", "Year"].map((f) => (
+        {["Todos", "Día", "Semana", "Mes", "Año"].map((f) => (
           <TouchableOpacity
             key={f}
             onPress={() => setFilter(f)}
