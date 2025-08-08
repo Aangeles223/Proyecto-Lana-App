@@ -26,7 +26,7 @@ export default function PagosFijosScreen({ navigation }) {
           const userStr = await AsyncStorage.getItem("user");
           const user = JSON.parse(userStr);
 
-          const res = await fetch(`http://192.168.1.67:3000/pagos-fijos/${user.id}`);
+          const res = await fetch(`http://172.20.10.6:3000/pagos-fijos/${user.id}`);
           const data = await res.json();
 
           if (data.success) {

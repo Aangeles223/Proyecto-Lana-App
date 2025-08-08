@@ -31,7 +31,7 @@ export default function PerfilScreen({ navigation }) {
           const user = JSON.parse(userStr);
           setUserId(user.id);
           // Obtener datos actualizados de la BD
-          const res = await fetch(`http://192.168.1.67:3000/usuario/${user.id}`);
+          const res = await fetch(`http://172.20.10.6:3000/usuario/${user.id}`);
           const data = await res.json();
           if (data.success && data.user) {
             setNombre(data.user.nombre);
@@ -50,7 +50,7 @@ export default function PerfilScreen({ navigation }) {
   // Guardar cambios en la BD y en AsyncStorage
   const guardarCambios = async () => {
     try {
-      const res = await fetch(`http://10.0.0.11:3000/usuario/${userId}`, {
+      const res = await fetch(`http://172.20.10.6:3000/usuario/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

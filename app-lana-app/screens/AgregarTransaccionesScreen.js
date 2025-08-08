@@ -30,7 +30,7 @@ export default function AgregarTransaccionScreen({ navigation }) {
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const res = await fetch("http://192.168.1.67:3000/categorias");
+        const res = await fetch("http://172.20.10.6:3000/categorias");
         const data = await res.json();
         if (data.success) {
           setCategorias(data.categorias);
@@ -52,7 +52,7 @@ export default function AgregarTransaccionScreen({ navigation }) {
       const userStr = await AsyncStorage.getItem("user");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://10.0.0.11:3000/transacciones", {
+      const res = await fetch("http://172.20.10.6:3000/transacciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

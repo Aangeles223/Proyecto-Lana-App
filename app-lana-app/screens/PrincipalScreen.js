@@ -31,7 +31,7 @@ export default function PrincipalScreen({ navigation }) {
 
           // Obtener saldo y transacciones del backend
           const res = await fetch(
-            `http://192.168.1.67:3000/usuario/${user.id}/resumen`
+            `http://172.20.10.6:3000/usuario/${user.id}/resumen`
           );
           const data = await res.json();
           if (data.success) {

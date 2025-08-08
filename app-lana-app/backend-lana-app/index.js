@@ -134,7 +134,6 @@ app.get("/usuario/:id/resumen", (req, res) => {
     }
   );
 });
-// Obtener transacciones y saldo de un usuario
 
 // Ayuda
 app.get("/ayuda/info", (req, res) => {
@@ -173,17 +172,19 @@ app.put("/usuario/:id", (req, res) => {
 });
 
 app.post("/transacciones", (req, res) => {
-  const { usuario_id, tipo, categoria_id, monto, fecha, descripcion } =
-    req.body;
+  const { usuario_id, tipo, categoria_id, monto, fecha, descripcion } = req.body;
   db.query(
     "INSERT INTO transacciones (usuario_id, tipo, categoria_id, monto, fecha, descripcion) VALUES (?, ?, ?, ?, ?, ?)",
     [usuario_id, tipo, categoria_id, monto, fecha, descripcion],
     (err, result) => {
-      if (err) return res.status(500).json({ success: false, error: err });
+      if (err) {
+        return res.status(500).json({ success: false, error: err });
+      }
       res.json({ success: true, id: result.insertId });
     }
   );
 });
+
 
 app.get("/categorias", (req, res) => {
   db.query("SELECT id, nombre FROM categorias", (err, results) => {

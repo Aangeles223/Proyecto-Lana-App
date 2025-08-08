@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import {
   Ionicons,
   FontAwesome5,
@@ -9,32 +9,84 @@ import * as Notifications from "expo-notifications";
 import LogoLana from "../components/LogoLana";
 
 export default function AgregarDineroConfirmarScreen({ navigation, route }) {
-  const { monto, metodo, icon, extra } = route.params;
+  const {
+    usuario_id,
+    monto,
+    metodo,
+    icon,
+    extra,
+    categoria_id = null,
+    tipo = "ingreso",
+    descripcion = "Depósito",
+  } = route.params;
 
   const handleConfirmar = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Depósito exitoso",
-        body: `Se depositaron $${monto} a tu cuenta.`,
-        sound: true,
-      },
-      trigger: null,
-    });
-    navigation.replace("MainTabs", { screen: "Menu" });
+    try {
+      const response = await fetch("http://172.20.10.6:3000/transacciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id,
+          tipo,
+          categoria_id,
+          monto,
+          fecha: new Date().toISOString().split("T")[0], // yyyy-mm-dd
+          descripcion,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        Alert.alert("Error", "No se pudo registrar la transacción.");
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Depósito exitoso",
+            body: `Se depositaron $${monto} a tu cuenta.`,
+            sound: true,
+          },
+          trigger: null,
+        });
+
+        // Aquí muestra el alert de éxito
+        Alert.alert(
+          "Transacción exitosa",
+          `Se registró el depósito de $${monto} correctamente.`,
+          [
+            {
+              text: "Aceptar",
+              onPress: () => navigation.replace("MainTabs", { screen: "Menu" }),
+            },
+          ],
+          { cancelable: false }
+        );
+
+      } else {
+        Alert.alert("Error", "No se pudo registrar la transacción.");
+      }
+    } catch (error) {
+      console.error("Error al registrar transacción:", error);
+      Alert.alert("Error", "Ocurrió un error al registrar la transacción.");
+    }
   };
+
 
   let MetodoIcon = null;
   if (icon === "cc-visa")
     MetodoIcon = <FontAwesome5 name="cc-visa" size={32} color="#1976d2" />;
-  if (icon === "bank-transfer")
+  else if (icon === "bank-transfer")
     MetodoIcon = (
       <MaterialCommunityIcons name="bank-transfer" size={32} color="#388e3c" />
     );
-  if (icon === "cash")
-    MetodoIcon = (
-      <MaterialCommunityIcons name="cash" size={32} color="#388e3c" />
-    );
-  if (icon === "dots-horizontal")
+  else if (icon === "cash")
+    MetodoIcon = <MaterialCommunityIcons name="cash" size={32} color="#388e3c" />;
+  else if (icon === "dots-horizontal")
     MetodoIcon = (
       <MaterialCommunityIcons name="dots-horizontal" size={32} color="#888" />
     );
@@ -50,16 +102,14 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
         <View style={{ flex: 2, alignItems: "center" }}>
           <LogoLana />
         </View>
-        <View style={{ flex: 1, alignItems: "flex-end" }}>
-          {/* Si quieres una campana aquí, agrégala. Si no, deja vacío */}
-        </View>
+        <View style={{ flex: 1 }} />
       </View>
-      {/* Contenido centrado */}
+
       <View style={styles.centerContent}>
         <Text style={styles.title}>Agregar dinero</Text>
         <Text style={styles.monto}>${monto}</Text>
         <Text style={styles.confirmar}>Confirmar Pago</Text>
-        <Text style={styles.label}>Metodo de pago</Text>
+        <Text style={styles.label}>Método de pago</Text>
         <View style={styles.metodoRow}>
           {MetodoIcon}
           <Text style={styles.metodoText}>
@@ -67,7 +117,7 @@ export default function AgregarDineroConfirmarScreen({ navigation, route }) {
           </Text>
         </View>
       </View>
-      {/* Botón Confirmar y Salir abajo */}
+
       <View style={styles.bottomArea}>
         <TouchableOpacity style={styles.button} onPress={handleConfirmar}>
           <Text style={styles.buttonText}>Confirmar</Text>

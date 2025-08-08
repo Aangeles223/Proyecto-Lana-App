@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
   Ionicons,
   FontAwesome5,
@@ -8,7 +8,20 @@ import {
 import LogoLana from "../components/LogoLana";
 
 export default function AgregarDineroMetodoScreen({ navigation, route }) {
-  const { monto } = route.params;
+  const { monto, usuario_id } = route.params;
+
+  const navegarConfirmar = (metodo, icon, extra = "") => {
+    navigation.navigate("AgregarDineroConfirmar", {
+      monto,
+      usuario_id,
+      metodo,
+      icon,
+      extra,
+      categoria_id: null,
+      tipo: "ingreso",
+      descripcion: null,
+    });
+  };
 
   return (
     <View style={styles.background}>
@@ -23,19 +36,13 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
         </View>
         <View style={{ flex: 1 }} />
       </View>
-      {/* Contenido centrado */}
+
       <View style={styles.centerContent}>
         <Text style={styles.title}>Agregar dinero</Text>
+
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() =>
-            navigation.navigate("AgregarDineroConfirmar", {
-              monto,
-              metodo: "Tarjeta",
-              icon: "cc-visa",
-              extra: "Visa 7764",
-            })
-          }
+          onPress={() => navegarConfirmar("Tarjeta", "cc-visa", "Visa 7764")}
         >
           <FontAwesome5
             name="cc-visa"
@@ -45,16 +52,10 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Tarjeta</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() =>
-            navigation.navigate("AgregarDineroConfirmar", {
-              monto,
-              metodo: "Transferencia",
-              icon: "bank-transfer",
-              extra: "",
-            })
-          }
+          onPress={() => navegarConfirmar("Transferencia", "bank-transfer")}
         >
           <MaterialCommunityIcons
             name="bank-transfer"
@@ -64,16 +65,10 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Transferencia</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() =>
-            navigation.navigate("AgregarDineroConfirmar", {
-              monto,
-              metodo: "Efectivo",
-              icon: "cash",
-              extra: "",
-            })
-          }
+          onPress={() => navegarConfirmar("Efectivo", "cash")}
         >
           <MaterialCommunityIcons
             name="cash"
@@ -83,16 +78,10 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           />
           <Text style={styles.metodoText}>Efectivo</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.metodoBtn}
-          onPress={() =>
-            navigation.navigate("AgregarDineroConfirmar", {
-              monto,
-              metodo: "Otro",
-              icon: "dots-horizontal",
-              extra: "",
-            })
-          }
+          onPress={() => navegarConfirmar("Otro", "dots-horizontal")}
         >
           <MaterialCommunityIcons
             name="dots-horizontal"
@@ -103,7 +92,7 @@ export default function AgregarDineroMetodoScreen({ navigation, route }) {
           <Text style={styles.metodoText}>Otro</Text>
         </TouchableOpacity>
       </View>
-      {/* Botón Salir abajo */}
+
       <View style={styles.bottomArea}>
         <TouchableOpacity
           style={styles.logoutBtn}

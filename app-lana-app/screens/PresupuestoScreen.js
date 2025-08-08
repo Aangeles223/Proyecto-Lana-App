@@ -20,7 +20,7 @@ export default function PresupuestosScreen({ navigation }) {
     setLoading(true);
     const userStr = await AsyncStorage.getItem("user");
     const user = JSON.parse(userStr);
-    const res = await fetch(`http://192.168.1.67:3000/presupuestos/${user.id}`);
+    const res = await fetch(`http://172.20.10.6:3000/presupuestos/${user.id}`);
     const data = await res.json();
     if (data.success) setPresupuestos(data.presupuestos);
     setLoading(false);

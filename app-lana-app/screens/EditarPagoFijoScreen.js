@@ -42,7 +42,7 @@ export default function EditarPagoFijoScreen({ route, navigation }) {
         }
 
         // Cargar categorías
-        const resCat = await fetch("http://192.168.1.67:3000/categorias");
+        const resCat = await fetch("http://172.20.10.6:3000/categorias");
         const dataCat = await resCat.json();
         if (dataCat.success) {
           const catItems = dataCat.categorias.map((c) => ({
@@ -57,7 +57,7 @@ export default function EditarPagoFijoScreen({ route, navigation }) {
         }
 
         // Cargar servicios
-        const resServ = await fetch("http://192.168.1.67:3000/servicios");
+        const resServ = await fetch("http://172.20.10.6:3000/servicios");
         const dataServ = await resServ.json();
         if (dataServ.success) {
           const servItems = dataServ.servicios.map((s) => ({
@@ -106,7 +106,7 @@ export default function EditarPagoFijoScreen({ route, navigation }) {
 
     try {
       // Aquí llamas a tu API para actualizar el pago fijo, ejemplo:
-      const res = await fetch(`http://192.168.1.67:3000/pagos-fijos/${pago.id}`, {
+      const res = await fetch(`http://172.20.10.6:3000/pagos-fijos/${pago.id}`, {
         method: "PUT", // o PATCH según tu API
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
