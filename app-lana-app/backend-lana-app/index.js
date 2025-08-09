@@ -13,7 +13,7 @@ const bcrypt = require("bcryptjs");
 db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "Master12$",
+  password: "12358",
   database: "lana_app",
 });
 

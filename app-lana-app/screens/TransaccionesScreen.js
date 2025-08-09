@@ -16,8 +16,8 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 // Detección automática de host para ambos servicios
 let devHost;
-if (Platform.OS === "android") devHost = "10.16.36.167";
-else if (Platform.OS === "ios") devHost = "10.16.36.167";
+if (Platform.OS === "android") devHost = "172.20.10.6";
+else if (Platform.OS === "ios") devHost = "172.20.10.6";
 else {
   const debuggerHost = Constants.manifest?.debuggerHost;
   devHost = debuggerHost ? debuggerHost.split(":")[0] : "localhost";

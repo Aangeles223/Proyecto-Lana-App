@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
 
 // Determinar base URL (no usado aquí pero preparado para futuras llamadas API)
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "172.20.10.6";
 const BASE_URL = `http://${host}:3000`;
 
 export default function AgregarDineroMontoScreen({ navigation }) {
