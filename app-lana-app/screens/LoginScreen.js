@@ -17,10 +17,18 @@ import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
 import Constants from "expo-constants";
-
-// Determina host en función de Expo debuggerHost (localhost, emulador o LAN) o IP fija de tu PC
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+// Determinar host para API: debuggerHost (Expo), emulador Android o LAN IP
+const manifest = Constants.manifest || {};
+let host = manifest.debuggerHost?.split(":")[0];
+if (!host || host === "localhost" || host === "127.0.0.1") {
+  if (Platform.OS === "android") {
+    host = "10.0.2.2";
+  } else {
+    host = "10.0.0.11";
+  }
+}
 const BASE_URL = `http://${host}:3000`;
+console.log("🔗 API BASE_URL:", BASE_URL);
 
 const { width, height } = Dimensions.get("window");
 
@@ -46,7 +54,8 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
       });
       const data = await response.json();
       console.log("Login response data:", data, "response.ok:", response.ok);
-      if (response.ok) {
+      // Iniciar sesión si el backend indicó éxito
+      if (data.success) {
         // Limpiar datos viejos antes de guardar nuevos
         await AsyncStorage.removeItem("user");
         await AsyncStorage.setItem("isLoggedIn", "true");
@@ -80,12 +89,13 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
         };
         console.log("Storing user profile with token:", normalizedUser);
         await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
-        // Verificar AsyncStorage inmediatamente
-        const stored = await AsyncStorage.getItem("user");
-        console.log("AsyncStorage 'user':", stored);
-        // Marcar usuario autenticado para mostrar navegación protegida
+        console.log(
+          "📌 Usuario autenticado, almacenado y marcando sesión activa"
+        );
         setIsLoggedIn(true);
+        // La actualización de isLoggedIn en App.js cambiará automáticamente a MainTabs
       } else {
+        console.warn("Login failed según data.success:", data);
         setError(
           data.detail || data.message || "Correo o contraseña incorrectos"
         );

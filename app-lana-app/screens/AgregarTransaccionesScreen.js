@@ -20,7 +20,7 @@ import Constants from "expo-constants";
 import { Picker } from "@react-native-picker/picker";
 
 // Determina host según Expo debuggerHost o IP fija
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
 const BASE_URL = `http://${host}:3000`;
 
 // Mapeo de nombres de categoría a iconos

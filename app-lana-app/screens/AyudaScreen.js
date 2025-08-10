@@ -3,14 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
+import Constants from "expo-constants";
 
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
 export default function AyudaScreen() {
   const [info, setInfo] = useState(null);
 
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const res = await fetch("http://10.16.36.167/ayuda/info");
+        const res = await fetch(`http://${host}/ayuda/info`);
         const data = await res.json();
         if (data.success) setInfo(data.info);
       } catch (e) {

@@ -24,6 +24,7 @@ import AgregarNuevoPagoScreen from "./screens/AgregarNuevoPagoScreen";
 import EditarPagoFijoScreen from "./screens/EditarPagoFijoScreen";
 import SplashScreen from "./screens/SplashScreen";
 import InactivityHandler from "./components/InactivityHandler";
+import NotificacionesScreen from "./screens/NotificacionesScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -113,6 +114,10 @@ export default function App() {
             </Stack.Screen>
             <Stack.Screen name="Perfil" component={PerfilScreen} />
             <Stack.Screen name="Presupuesto" component={PresupuestosScreen} />
+            <Stack.Screen
+              name="Notificaciones"
+              component={NotificacionesScreen}
+            />
             <Stack.Screen name="PagosFijos" component={PagosFijosScreen} />
             <Stack.Screen
               name="AgregarNuevoPago"

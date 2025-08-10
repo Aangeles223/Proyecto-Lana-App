@@ -17,9 +17,15 @@ import {
 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-// Determina host y base URL para API proxy
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+import { Platform } from "react-native";
+// Determinar host y base URL para API proxy: leer debuggerHost y si es localhost usar fallback emulador/LAN
+const manifest = Constants.manifest || {};
+let host = manifest.debuggerHost?.split(":")[0];
+if (!host || host === "localhost" || host === "127.0.0.1") {
+  host = Platform.OS === "android" ? "10.0.2.2" : "10.0.0.11";
+}
 const BASE_URL = `http://${host}:3000`;
+console.log("🔗 BASE_URL PrincipalScreen:", BASE_URL);
 
 export default function PrincipalScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
@@ -45,7 +51,13 @@ export default function PrincipalScreen({ navigation }) {
       }
       setNombre(parsedUser.nombre);
       // Obtener historial de transacciones de la API
-      const res = await fetch(`${BASE_URL}/transacciones/historial/${userId}`);
+      const url = `${BASE_URL}/transacciones/historial/${userId}`;
+      console.log("Fetching historial desde:", url);
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error("HTTP error fetching historial:", res.status);
+        return;
+      }
       let history;
       try {
         history = await res.json();
@@ -55,14 +67,20 @@ export default function PrincipalScreen({ navigation }) {
         return;
       }
       if (Array.isArray(history)) {
-        // Asegurar que monto y cantidad sean números
-        const cleaned = history.map((t) => ({
-          ...t,
-          monto: Number(t.monto),
-          cantidad: Number(t.cantidad),
-        }));
+        // Convertir monto a número (fallback 0) y calcular cantidad según tipo
+        const cleaned = history.map((t) => {
+          const montoNum = Number(t.monto) || 0;
+          const tipo = (t.tipo || "").toLowerCase();
+          const cantidad =
+            tipo === "ingreso"
+              ? montoNum
+              : tipo === "egreso"
+              ? -montoNum
+              : montoNum;
+          return { ...t, monto: montoNum, cantidad };
+        });
         setTransacciones(cleaned);
-        // Calcular saldo correctamente
+        // Calcular saldo sumando cantidades
         const total = cleaned.reduce((sum, t) => sum + (t.cantidad || 0), 0);
         setSaldo(total);
       }
@@ -141,34 +159,40 @@ export default function PrincipalScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <ScrollView style={{ width: "100%" }}>
-          {transacciones.map((t, i) => (
-            <View key={i} style={styles.transaccionRow}>
-              <View style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}>
-                <MaterialIcons name="restaurant" size={24} color="#222" />
-              </View>
-              <View style={styles.transInfo}>
-                <Text style={styles.transTitle}>
-                  {t.categoria || "Transacción"}
+          {transacciones.length === 0 ? (
+            <Text style={styles.emptyText}>No hay transacciones</Text>
+          ) : (
+            transacciones.map((t, i) => (
+              <View key={i} style={styles.transaccionRow}>
+                <View
+                  style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}
+                >
+                  <MaterialIcons name="restaurant" size={24} color="#222" />
+                </View>
+                <View style={styles.transInfo}>
+                  <Text style={styles.transTitle}>
+                    {t.categoria || "Transacción"}
+                  </Text>
+                  <Text style={styles.transDate}>
+                    {new Date(t.fecha).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.transDesc}>{t.descripcion}</Text>
+                </View>
+                <Text
+                  style={
+                    t.cantidad < 0
+                      ? styles.transAmountRed
+                      : styles.transAmountGreen
+                  }
+                >
+                  {t.cantidad < 0 ? "- " : ""}$
+                  {Math.abs(t.cantidad).toLocaleString("es-MX", {
+                    minimumFractionDigits: 2,
+                  })}
                 </Text>
-                <Text style={styles.transDate}>
-                  {new Date(t.fecha).toLocaleDateString()}
-                </Text>
-                <Text style={styles.transDesc}>{t.descripcion}</Text>
               </View>
-              <Text
-                style={
-                  t.cantidad < 0
-                    ? styles.transAmountRed
-                    : styles.transAmountGreen
-                }
-              >
-                {t.cantidad < 0 ? "- " : ""}$
-                {Math.abs(t.cantidad).toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                })}
-              </Text>
-            </View>
-          ))}
+            ))
+          )}
         </ScrollView>
       </View>
     </LinearGradient>
@@ -317,6 +341,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginLeft: 8,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#888",
+    fontSize: 16,
+    marginTop: 20,
+    marginBottom: 20,
   },
   bottomNav: {
     flexDirection: "row",

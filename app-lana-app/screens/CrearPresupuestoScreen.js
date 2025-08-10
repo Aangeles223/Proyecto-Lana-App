@@ -16,7 +16,11 @@ import LogoLana from "../components/LogoLana";
 import Constants from "expo-constants";
 
 // Determina host según Expo debuggerHost o IP fija
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+const manifest = Constants.manifest || {};
+// Obtener host del packager o usar fallback: Android emulator: 10.0.2.2, iOS: localhost
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+const defaultHost = Platform.OS === "android" ? "10.0.2.2" : "localhost";
+const host = debuggerHost || defaultHost;
 const BASE_URL = `http://${host}:3000`;
 
 export default function CrearPresupuestoScreen({ navigation }) {
@@ -43,31 +47,43 @@ export default function CrearPresupuestoScreen({ navigation }) {
   }, []);
 
   const handleAgregar = async () => {
-    if (!monto || isNaN(Number(monto))) {
-      Alert.alert("Error", "Ingresa un monto válido.");
-      return;
-    }
-    const userStr = await AsyncStorage.getItem("user");
-    const user = JSON.parse(userStr);
-    const fecha = new Date();
-    let mes = fecha.getMonth() + 1;
-    let anio = fecha.getFullYear();
+    try {
+      // Validación de monto
+      if (!monto || isNaN(Number(monto))) {
+        Alert.alert("Error", "Ingresa un monto válido.");
+        return;
+      }
+      const userStr = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userStr);
+      const fecha = new Date();
+      const mes = fecha.getMonth() + 1;
+      const anio = fecha.getFullYear();
 
-    const res = await fetch(`${BASE_URL}/presupuestos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        usuario_id: user.id,
-        categoria_id: categoria,
-        monto_mensual: Number(monto),
-        mes,
-        anio,
-      }),
-    });
-    const data = await res.json();
-    if (data.id) {
-      navigation.goBack();
-    } else {
+      // Solicitud al backend para crear presupuesto
+      const res = await fetch(`${BASE_URL}/presupuestos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: user.id,
+          categoria_id: categoria,
+          monto_mensual: Number(monto),
+          mes,
+          anio,
+        }),
+      });
+      if (!res.ok) {
+        console.error("Error HTTP al crear presupuesto:", res.status);
+        Alert.alert("Error", "No se pudo agregar el presupuesto.");
+        return;
+      }
+      const data = await res.json();
+      if (data.id) {
+        navigation.goBack();
+      } else {
+        Alert.alert("Error", "No se pudo agregar el presupuesto.");
+      }
+    } catch (e) {
+      console.error("Error en handleAgregar CrearPresupuestoScreen:", e);
       Alert.alert("Error", "No se pudo agregar el presupuesto.");
     }
   };

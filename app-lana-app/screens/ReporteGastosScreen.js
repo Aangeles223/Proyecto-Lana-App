@@ -9,9 +9,16 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { PieChart, LineChart } from "react-native-chart-kit";
+import { PieChart, LineChart, BarChart } from "react-native-chart-kit";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Detectar host dinámicamente (como en otras pantallas)
+import Constants from "expo-constants";
+const manifest = Constants.manifest || {};
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+const host = debuggerHost || "10.0.0.11";
+const BASE_URL = `http://${host}:3000`;
 
 // Puedes ajustar los colores según tus categorías reales
 const coloresCategorias = {
@@ -22,6 +29,15 @@ const coloresCategorias = {
   Entretenimiento: "#4169E1",
   Otros: "#888",
 };
+// Paleta de colores por defecto para categorías sin color explícito
+const defaultColors = [
+  "#FF6384",
+  "#36A2EB",
+  "#FFCE56",
+  "#4BC0C0",
+  "#9966FF",
+  "#FF9F40",
+];
 
 const meses = [
   { label: "Enero", value: 1 },
@@ -51,60 +67,87 @@ export default function ReporteGastosScreen({ navigation }) {
   // Cargar datos reales de la BD
   useEffect(() => {
     const fetchReporte = async () => {
-      setLoading(true);
-      const userStr = await AsyncStorage.getItem("user");
-      const user = JSON.parse(userStr);
-      const res = await fetch(
-        `http://10.16.36.167:3000/reporte/${user.id}/${anioSeleccionado}/${mesSeleccionado}`
-      );
-      const data = await res.json();
-      if (data.success) setReporte(data.reporte);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const userStr = await AsyncStorage.getItem("user");
+        const user = JSON.parse(userStr);
+        const res = await fetch(
+          `${BASE_URL}/reporte/${user.id}/${anioSeleccionado}/${mesSeleccionado}`
+        );
+        const data = await res.json();
+        if (data.success && Array.isArray(data.reporte)) {
+          const numeric = data.reporte.map((r) => ({
+            categoria: r.categoria,
+            ingresos: parseFloat(r.ingresos) || 0,
+            egresos: parseFloat(r.egresos) || 0,
+          }));
+          setReporte(numeric);
+        } else {
+          setReporte([]);
+        }
+      } catch (error) {
+        console.warn("Error fetchReporte:", error);
+        setReporte([]);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchReporte();
   }, [mesSeleccionado, anioSeleccionado]);
 
-  // Pie chart para egresos
-  const pieData = reporte
-    .filter((r) => r.egresos > 0)
-    .map((r) => ({
-      name: r.categoria,
-      amount: r.egresos,
-      color: coloresCategorias[r.categoria] || "#888",
-      legendFontColor: "#222",
-      legendFontSize: 14,
-    }));
+  // Parsear y normalizar datos numéricos
+  const reporteNum = reporte.map((r) => ({
+    categoria: r.categoria,
+    ingresos: parseFloat(r.ingresos) || 0,
+    egresos: parseFloat(r.egresos) || 0,
+  }));
+  // Totales
+  const totalIngresos = reporteNum.reduce((sum, r) => sum + r.ingresos, 0);
+  const totalEgresos = reporteNum.reduce((sum, r) => sum + r.egresos, 0);
+  // Formato de moneda
+  const totalIngresosFmt = `$${totalIngresos.toFixed(2)}`;
+  const totalEgresosFmt = `$${totalEgresos.toFixed(2)}`;
+  // Datos para gráfica de barras
+  const labels = reporteNum.map((r) => r.categoria);
+  const ingresosData = reporteNum.map((r) => r.ingresos);
+  const egresosData = reporteNum.map((r) => r.egresos);
+  // Preparar datos de gráficos
+  const egresoCats = reporteNum.filter((r) => r.egresos > 0);
+  const pieDataEgresos = egresoCats.map((r, i) => ({
+    name: r.categoria,
+    population: r.egresos,
+    color:
+      coloresCategorias[r.categoria] || defaultColors[i % defaultColors.length],
+    legendFontColor: "#222",
+    legendFontSize: 12,
+  }));
+  const ingresoCats = reporteNum.filter((r) => r.ingresos > 0);
+  const pieDataIngresos = ingresoCats.map((r, i) => ({
+    name: r.categoria,
+    population: r.ingresos,
+    color:
+      coloresCategorias[r.categoria] ||
+      defaultColors[(i + pieDataEgresos.length) % defaultColors.length],
+    legendFontColor: "#222",
+    legendFontSize: 12,
+  }));
+  // Mock datos semanales: dividir total por 4 semanas
+  const weekLabels = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
+  const weeklyEgresos = pieDataEgresos.length
+    ? weekLabels.map((_, i) => (totalEgresos / 4).toFixed(2))
+    : [];
+  const weeklyIngresos = pieDataIngresos.length
+    ? weekLabels.map((_, i) => (totalIngresos / 4).toFixed(2))
+    : [];
 
-  // Pie chart para ingresos (opcional)
-  const pieDataIngresos = reporte
-    .filter((r) => r.ingresos > 0)
-    .map((r) => ({
-      name: r.categoria,
-      amount: r.ingresos,
-      color: coloresCategorias[r.categoria] || "#888",
-      legendFontColor: "#222",
-      legendFontSize: 14,
-    }));
-
-  // Total ingresos y egresos
-  const totalIngresos = reporte.reduce((a, b) => a + (b.ingresos || 0), 0);
-  const totalEgresos = reporte.reduce((a, b) => a + (b.egresos || 0), 0);
-
-  // Simulación de datos semanales para el gráfico de líneas (puedes adaptar tu backend para esto)
-  const lineLabels = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
-  // Aquí deberías traer los datos reales por semana desde el backend
-  const gastosLine = [
-    totalEgresos * 0.2,
-    totalEgresos * 0.4,
-    totalEgresos * 0.7,
-    totalEgresos,
-  ];
-  const ingresosLine = [
-    totalIngresos * 0.2,
-    totalIngresos * 0.4,
-    totalIngresos * 0.7,
-    totalIngresos,
-  ];
+  // Configuración común para gráficos
+  const chartConfig = {
+    backgroundGradientFrom: "#fff",
+    backgroundGradientTo: "#fff",
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(34,34,34,${opacity})`,
+    labelColor: () => "#222",
+  };
 
   return (
     <View style={styles.background}>
@@ -178,120 +221,55 @@ export default function ReporteGastosScreen({ navigation }) {
         </ScrollView>
         {/* Resumen */}
         <Text style={styles.resumen}>
-          Ingresos: <Text style={{ color: "#1976d2" }}>${totalIngresos}</Text> |{" "}
-          Egresos: <Text style={{ color: "#e74c3c" }}>${totalEgresos}</Text>
+          Ingresos: <Text style={{ color: "#1976d2" }}>{totalIngresosFmt}</Text>{" "}
+          | Egresos: <Text style={{ color: "#e74c3c" }}>{totalEgresosFmt}</Text>
         </Text>
-        {/* Pie Chart de egresos */}
-        <Text style={styles.subtitulo}>Egresos por categoría</Text>
+        {/* PieChart: Egresos por Categoría */}
+        <Text style={styles.subtitulo}>Egresos por Categoría</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#1976d2" />
+        ) : pieDataEgresos.length > 0 ? (
+          <PieChart
+            data={pieDataEgresos}
+            width={Dimensions.get("window").width - 40}
+            height={200}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="20"
+            absolute
+            chartConfig={chartConfig}
+            style={styles.chartContainer}
+          />
         ) : (
-          <>
-            <PieChart
-              data={pieData}
-              width={Dimensions.get("window").width - 40}
-              height={200}
-              chartConfig={{
-                color: () => "#222",
-                labelColor: () => "#222",
-              }}
-              accessor="amount"
-              backgroundColor="transparent"
-              paddingLeft="10"
-              absolute
-            />
-            {/* Leyenda con montos */}
-            <View style={styles.leyenda}>
-              {pieData.map((item) => (
-                <View key={item.name} style={styles.leyendaItem}>
-                  <View
-                    style={[
-                      styles.leyendaColor,
-                      { backgroundColor: item.color },
-                    ]}
-                  />
-                  <Text style={styles.leyendaText}>
-                    <Text style={{ fontWeight: "bold" }}>{item.amount}</Text>{" "}
-                    {item.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
+          <Text style={styles.noDataText}>
+            No hay egresos para{" "}
+            {meses.find((m) => m.value === mesSeleccionado)?.label}{" "}
+            {anioSeleccionado}
+          </Text>
         )}
-        {/* Pie Chart de ingresos (opcional) */}
-        <Text style={styles.subtitulo}>Ingresos por categoría</Text>
+
+        {/* BarChart: Ingresos vs Egresos Totales */}
+        <Text style={styles.subtitulo}>Ingresos vs Egresos Totales</Text>
         {loading ? (
-          <ActivityIndicator size="small" color="#1976d2" />
-        ) : (
-          <>
-            <PieChart
-              data={pieDataIngresos}
-              width={Dimensions.get("window").width - 40}
-              height={200}
-              chartConfig={{
-                color: () => "#222",
-                labelColor: () => "#222",
-              }}
-              accessor="amount"
-              backgroundColor="transparent"
-              paddingLeft="10"
-              absolute
-            />
-            <View style={styles.leyenda}>
-              {pieDataIngresos.map((item) => (
-                <View key={item.name} style={styles.leyendaItem}>
-                  <View
-                    style={[
-                      styles.leyendaColor,
-                      { backgroundColor: item.color },
-                    ]}
-                  />
-                  <Text style={styles.leyendaText}>
-                    <Text style={{ fontWeight: "bold" }}>{item.amount}</Text>{" "}
-                    {item.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-        {/* Line Chart semanal */}
-        <Text style={styles.subtitulo}>Evolución semanal</Text>
-        <View style={{ marginTop: 10 }}>
-          <LineChart
+          <ActivityIndicator size="large" color="#1976d2" />
+        ) : totalIngresos > 0 || totalEgresos > 0 ? (
+          <BarChart
             data={{
-              labels: lineLabels,
-              datasets: [
-                {
-                  data: ingresosLine,
-                  color: () => "#1976d2",
-                  strokeWidth: 2,
-                  withDots: false,
-                },
-                {
-                  data: gastosLine,
-                  color: () => "#e74c3c",
-                  strokeWidth: 2,
-                  withDots: false,
-                },
-              ],
-              legend: ["Ingresos", "Gastos"],
+              labels: ["Ingresos", "Egresos"],
+              datasets: [{ data: [totalIngresos, totalEgresos] }],
             }}
             width={Dimensions.get("window").width - 40}
-            height={180}
-            chartConfig={{
-              backgroundGradientFrom: "#fff",
-              backgroundGradientTo: "#fff",
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(34,34,34,${opacity})`,
-              labelColor: () => "#222",
-              propsForDots: { r: "0" },
-            }}
-            bezier
-            style={{ borderRadius: 16 }}
+            height={220}
+            fromZero
+            yAxisLabel="$"
+            chartConfig={chartConfig}
+            style={styles.chartContainer}
           />
-        </View>
+        ) : (
+          <Text style={styles.noDataText}>
+            No hay datos de ingresos o egresos
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -392,5 +370,22 @@ const styles = StyleSheet.create({
     color: "#222",
     fontFamily: "serif",
     marginRight: 16,
+  },
+  chartContainer: {
+    marginVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noDataText: {
+    textAlign: "center",
+    color: "#888",
+    marginVertical: 16,
+    fontSize: 16,
   },
 });

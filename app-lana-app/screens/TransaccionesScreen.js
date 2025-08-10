@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,75 +10,57 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
-// Detección automática de host para ambos servicios
-let devHost;
-if (Platform.OS === "android") devHost = "10.16.36.167";
-else if (Platform.OS === "ios") devHost = "10.16.36.167";
-else {
-  const debuggerHost = Constants.manifest?.debuggerHost;
-  devHost = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-}
-const BASE_URL = `http://${devHost}:3000`; // Proxy Express
-const API_URL_FASTAPI = `http://${devHost}:8000`; // FastAPI direct
+// Detección automática de host para la API
+const manifest = Constants.manifest || {};
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+// Preferir host del debugger, si no, usar IP LAN de desarrollo
+const devHost = debuggerHost || "10.0.0.11";
+const BASE_URL = `http://${devHost}:3000`; // Express proxy endpoint
 
 export default function TransaccionesScreen({ navigation }) {
   const [transacciones, setTransacciones] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState("Todos");
 
+  // Cargar historial al montar
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  // Cargar historial al recibir foco
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [])
+  );
+
   const loadHistory = async () => {
+    setRefreshing(true);
     try {
       const userStr = await AsyncStorage.getItem("user");
       if (!userStr) return;
       const { id: usuario_id } = JSON.parse(userStr);
       const url = `${BASE_URL}/transacciones/historial/${usuario_id}`;
-      console.log("Intentando cargar historial desde proxy:", url);
-      let res = await fetch(url);
+      console.log("Cargando historial desde proxy:", url);
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`Proxy respondió con status ${res.status}`);
-      // Si proxy no responde, fallback al FastAPI directo
-      let data = await res.json();
-      setTransacciones(Array.isArray(data) ? data : data.pagos_fijos || data);
-      return;
+      const data = await res.json();
+      console.log("Transacciones recibidas del servidor:", data);
+      const list = Array.isArray(data) ? data : [];
+      console.log("Transacciones procesadas:", list);
+      setTransacciones(list);
     } catch (e) {
-      console.warn("Proxy falló, intentando FastAPI directo:", e.message);
-      try {
-        const userStr = await AsyncStorage.getItem("user");
-        if (!userStr) return;
-        const { id: usuario_id } = JSON.parse(userStr);
-        const directUrl = `${API_URL_FASTAPI}/transacciones/historial/${usuario_id}`;
-        console.log(
-          "Intentando cargar historial desde FastAPI directo:",
-          directUrl
-        );
-        const res2 = await fetch(directUrl);
-        if (!res2.ok)
-          throw new Error(`FastAPI respondió status ${res2.status}`);
-        const data2 = await res2.json();
-        setTransacciones(
-          Array.isArray(data2) ? data2 : data2.pagos_fijos || data2
-        );
-        return;
-      } catch (e2) {
-        console.error("Error al cargar historial completo:", e2);
-        Alert.alert(
-          "Error al cargar historial",
-          `No se pudo cargar el historial: ${e2.message}. ` +
-            "Asegúrate de ejecutar `npm run start:proxy` y tener la API FastAPI en http://" +
-            `${devHost}:8000`
-        );
-      }
+      console.error("Error al cargar historial:", e);
+      Alert.alert("Error al cargar historial", e.message);
     } finally {
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    loadHistory();
-  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);

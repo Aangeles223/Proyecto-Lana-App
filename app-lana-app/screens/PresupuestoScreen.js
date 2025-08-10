@@ -7,28 +7,87 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+
+// Host detection
+const manifest = Constants.manifest || {};
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+const devHost = debuggerHost || "10.0.0.11";
+const BASE_URL = `http://${devHost}:3000`;
 
 export default function PresupuestosScreen({ navigation }) {
   const [presupuestos, setPresupuestos] = useState([]);
+  const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Función para obtener notificaciones
+  const fetchNotificaciones = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userStr);
+      console.log(
+        `Fetching notificaciones from ${BASE_URL}/notificaciones/${user.id}`
+      );
+      const res = await fetch(`${BASE_URL}/notificaciones/${user.id}`);
+      if (!res.ok) {
+        console.error("HTTP error fetching notificaciones:", res.status);
+        return;
+      }
+      const data = await res.json();
+      setNotifs(data);
+      // Programar notificaciones locales para nuevas
+      data
+        .filter((n) => !n.leido)
+        .forEach((n) => {
+          Notifications.scheduleNotificationAsync({
+            content: { title: "Notificación Lana App", body: n.mensaje },
+            trigger: null,
+          });
+        });
+    } catch (e) {
+      console.error("Error fetchNotificaciones:", e);
+    }
+  };
 
   const fetchPresupuestos = useCallback(async () => {
     setLoading(true);
-    const userStr = await AsyncStorage.getItem("user");
-    const user = JSON.parse(userStr);
-    const res = await fetch(`http://10.16.36.167:3000/presupuestos/${user.id}`);
-    const data = await res.json();
-    if (data.success) setPresupuestos(data.presupuestos);
-    setLoading(false);
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userStr);
+      console.log(
+        `Fetching presupuestos from ${BASE_URL}/presupuestos/${user.id}`
+      );
+      const res = await fetch(`${BASE_URL}/presupuestos/${user.id}`);
+      if (!res.ok) {
+        console.error("HTTP error fetching presupuestos:", res.status);
+        Alert.alert("Error", "No se pudo cargar los presupuestos.");
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        setPresupuestos(data.presupuestos);
+      } else {
+        console.error("API error fetching presupuestos:", data);
+        Alert.alert("Error", "Error en datos de presupuestos.");
+      }
+    } catch (e) {
+      console.error("Error fetchPresupuestos:", e);
+      Alert.alert("Error", "No se pudo cargar los presupuestos.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       fetchPresupuestos();
+      fetchNotificaciones();
     }, [fetchPresupuestos])
   );
 
@@ -44,8 +103,15 @@ export default function PresupuestosScreen({ navigation }) {
           <LogoLana />
         </View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notificaciones")}
+          >
             <Ionicons name="notifications-outline" size={28} color="#222" />
+            {notifs.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notifs.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -54,6 +120,8 @@ export default function PresupuestosScreen({ navigation }) {
         <Text style={styles.title}>Presupuesto mensual</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#1976d2" />
+        ) : presupuestos.length === 0 ? (
+          <Text style={styles.emptyText}>No hay presupuestos</Text>
         ) : (
           <ScrollView
             style={{ width: "100%" }}
@@ -196,4 +264,26 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   buttonText: { color: "#222", fontSize: 22, fontFamily: "serif" },
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -3,
+    backgroundColor: "#d32f2f",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  emptyText: {
+    fontSize: 18,
+    color: "#888",
+    textAlign: "center",
+    marginTop: 20,
+  },
 });

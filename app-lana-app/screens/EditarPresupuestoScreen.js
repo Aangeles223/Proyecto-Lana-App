@@ -14,10 +14,15 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 
-// Determinar base URL
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.16.36.167";
+// Determinar base URL según Expo debuggerHost o IP de la máquina (LAN)
+const manifest = Constants.manifest || {};
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+const host = debuggerHost || "10.0.0.11";
 const BASE_URL = `http://${host}:3000`;
+console.log("BASE_URL EditarPresupuestoScreen:", BASE_URL);
+console.log("BASE_URL EditarPresupuestoScreen:", BASE_URL);
 
 export default function EditarPresupuestoScreen({ route, navigation }) {
   const { presupuesto } = route.params;
@@ -45,6 +50,15 @@ export default function EditarPresupuestoScreen({ route, navigation }) {
       });
       const data = await res.json();
       if (data.success) {
+        Alert.alert("Éxito", "Presupuesto actualizado correctamente.");
+        // Notificación local
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Lana App",
+            body: "Tu presupuesto ha sido actualizado.",
+          },
+          trigger: null,
+        });
         navigation.goBack();
       } else {
         Alert.alert("Error", "No se pudo actualizar el presupuesto.");
@@ -65,14 +79,27 @@ export default function EditarPresupuestoScreen({ route, navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetch(
-                `${BASE_URL}/presupuestos/${presupuesto.id}`,
-                { method: "DELETE" }
-              );
+              const url = `${BASE_URL}/presupuestos/${presupuesto.id}`;
+              console.log("DELETE presupuesto URL:", url);
+              const res = await fetch(url, { method: "DELETE" });
+              console.log("DELETE response status:", res.status);
+              if (!res.ok) {
+                Alert.alert(
+                  "Error",
+                  `HTTP ${res.status} al eliminar presupuesto.`
+                );
+                return;
+              }
               const data = await res.json();
-              if (data.success) navigation.goBack();
-              else Alert.alert("Error", "No se pudo eliminar presupuesto.");
+              console.log("DELETE response JSON:", data);
+              if (data.success) {
+                Alert.alert("Éxito", "Presupuesto eliminado.");
+                navigation.goBack();
+              } else {
+                Alert.alert("Error", "No se pudo eliminar presupuesto.");
+              }
             } catch (e) {
+              console.error("Error al eliminar presupuesto:", e);
               Alert.alert("Error", e.message);
             }
           },
