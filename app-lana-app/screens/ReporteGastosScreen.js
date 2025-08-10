@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -57,12 +58,36 @@ const meses = [
 const anioActual = new Date().getFullYear();
 
 export default function ReporteGastosScreen({ navigation }) {
+  const [notifsCount, setNotifsCount] = useState(0);
   const [mesSeleccionado, setMesSeleccionado] = useState(
     new Date().getMonth() + 1
   );
   const [anioSeleccionado, setAnioSeleccionado] = useState(anioActual);
   const [reporte, setReporte] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Contar notificaciones
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchNotifs = async () => {
+        try {
+          const userStr = await AsyncStorage.getItem("user");
+          if (!userStr) return;
+          const { id: usuario_id } = JSON.parse(userStr);
+          const res = await fetch(`${BASE_URL}/notificaciones/${usuario_id}`);
+          const data = await res.json();
+          const unread =
+            Array.isArray(data) && data.length > 0
+              ? data.filter((n) => n.leido === 0).length
+              : 0;
+          setNotifsCount(unread);
+        } catch (e) {
+          console.error("Error fetching notifications count:", e);
+        }
+      };
+      fetchNotifs();
+    }, [])
+  );
 
   // Cargar datos reales de la BD
   useEffect(() => {
@@ -161,8 +186,16 @@ export default function ReporteGastosScreen({ navigation }) {
           <LogoLana />
         </View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notificaciones")}
+            style={styles.bellContainer}
+          >
             <Ionicons name="notifications-outline" size={28} color="#222" />
+            {notifsCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notifsCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -387,5 +420,25 @@ const styles = StyleSheet.create({
     color: "#888",
     marginVertical: 16,
     fontSize: 16,
+  },
+  bellContainer: {
+    position: "relative",
+    padding: 8,
+  },
+  badge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "red",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
   },
 });

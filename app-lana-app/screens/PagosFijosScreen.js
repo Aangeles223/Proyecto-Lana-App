@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -19,9 +19,31 @@ const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
 const BASE_URL = `http://${host}:3000`;
 
 const PagosFijosScreen = ({ navigation }) => {
+  const [notifsCount, setNotifsCount] = useState(0);
   const [pagosFijos, setPagosFijos] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const isFocused = useIsFocused();
+
+  // Fetch unread notifications on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchNotifs = async () => {
+        try {
+          const userStr = await AsyncStorage.getItem("user");
+          if (!userStr) return;
+          const { id: usuario_id } = JSON.parse(userStr);
+          const res = await fetch(`${BASE_URL}/notificaciones/${usuario_id}`);
+          const data = await res.json();
+          const unread =
+            Array.isArray(data) && data.filter((n) => n.leido === 0).length;
+          setNotifsCount(unread);
+        } catch (e) {
+          console.error("Error fetching notification count:", e);
+        }
+      };
+      fetchNotifs();
+    }, [])
+  );
 
   // Function to fetch pagos fijos
   const fetchPagos = async () => {
@@ -83,8 +105,16 @@ const PagosFijosScreen = ({ navigation }) => {
           <LogoLana />
         </View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notificaciones")}
+            style={styles.bellContainer}
+          >
             <Ionicons name="notifications-outline" size={28} color="#222" />
+            {notifsCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notifsCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -287,6 +317,23 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     marginLeft: 12,
+  },
+  bellContainer: { position: "relative", padding: 8 },
+  badge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "red",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
   },
 });
 

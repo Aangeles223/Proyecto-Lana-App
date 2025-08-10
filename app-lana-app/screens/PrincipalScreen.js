@@ -31,6 +31,7 @@ export default function PrincipalScreen({ navigation }) {
   const [nombre, setNombre] = useState("");
   const [saldo, setSaldo] = useState(0);
   const [transacciones, setTransacciones] = useState([]);
+  const [notifsCount, setNotifsCount] = useState(0);
 
   // Cargar usuario y transacciones
   const getUserAndData = async () => {
@@ -89,6 +90,28 @@ export default function PrincipalScreen({ navigation }) {
     }
   };
 
+  // Fetch unread notifications count
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchNotifsCount = async () => {
+        try {
+          const userStr = await AsyncStorage.getItem("user");
+          if (!userStr) return;
+          const { id: usuario_id } = JSON.parse(userStr);
+          const res = await fetch(`${BASE_URL}/notificaciones/${usuario_id}`);
+          const data = await res.json();
+          const unread = Array.isArray(data)
+            ? data.filter((n) => n.leido === 0).length
+            : 0;
+          setNotifsCount(unread);
+        } catch (e) {
+          console.error("Error fetching notifications count:", e);
+        }
+      };
+      fetchNotifsCount();
+    }, [])
+  );
+
   // Refrescar cada vez que la pantalla recibe foco
   useFocusEffect(
     React.useCallback(() => {
@@ -104,8 +127,17 @@ export default function PrincipalScreen({ navigation }) {
         <Text style={styles.bienvenida}>
           {nombre ? `Bienvenido, ${nombre}` : "Bienvenido"}
         </Text>
-        <TouchableOpacity style={styles.bellContainer}>
+        {/* Bell icon with notification badge */}
+        <TouchableOpacity
+          style={styles.bellContainer}
+          onPress={() => navigation.navigate("Notificaciones")}
+        >
           <Ionicons name="notifications-outline" size={28} color="#222" />
+          {notifsCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{notifsCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
       {/* Logo centrado */}
@@ -222,7 +254,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   bellContainer: {
-    marginLeft: 10,
+    position: "relative",
+    padding: 8,
+  },
+  badge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "red",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   card: {
     flex: 1,

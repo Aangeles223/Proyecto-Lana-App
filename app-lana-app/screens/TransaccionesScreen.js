@@ -13,7 +13,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 
 // Detección automática de host para la API
 const manifest = Constants.manifest || {};
@@ -21,6 +21,16 @@ const debuggerHost = manifest.debuggerHost?.split(":")[0];
 // Preferir host del debugger, si no, usar IP LAN de desarrollo
 const devHost = debuggerHost || "10.0.0.11";
 const BASE_URL = `http://${devHost}:3000`; // Express proxy endpoint
+
+// Category to icon mapping
+const categoryIconMap = {
+  Comida: { component: MaterialIcons, name: "restaurant" },
+  Transporte: { component: Ionicons, name: "car" },
+  Salud: { component: FontAwesome5, name: "heartbeat" },
+  Entretenimiento: { component: MaterialIcons, name: "movie" },
+  Hogar: { component: MaterialIcons, name: "home" },
+  Default: { component: MaterialIcons, name: "category" },
+};
 
 export default function TransaccionesScreen({ navigation }) {
   const [transacciones, setTransacciones] = useState([]);
@@ -147,11 +157,16 @@ export default function TransaccionesScreen({ navigation }) {
                 : -t.monto;
             return (
               <View key={i} style={styles.row}>
-                <MaterialIcons
-                  name="attach-money"
-                  size={24}
-                  color={monto < 0 ? "#e74c3c" : "#388e3c"}
-                />
+                <View
+                  style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}
+                >
+                  {(() => {
+                    const map =
+                      categoryIconMap[t.categoria] || categoryIconMap.Default;
+                    const Icon = map.component;
+                    return <Icon name={map.name} size={24} color="#222" />;
+                  })()}
+                </View>
                 <View style={styles.info}>
                   <Text style={styles.category}>
                     {t.categoria || "General"}
@@ -220,6 +235,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 10,
+  },
+  transIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   info: { flex: 1, marginLeft: 12 },
   category: { fontSize: 16, fontWeight: "600", color: "#222" },

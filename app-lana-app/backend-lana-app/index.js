@@ -107,6 +107,24 @@ app.get("/usuarios", async (req, res) => {
     res.status(500).json({ success: false, error: err });
   }
 });
+// Obtener perfil de usuario (ruta plural)
+app.get("/usuarios/:usuario_id", async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const [[user]] = await dbPool.query(
+      "SELECT id, nombre, apellidos, email, telefono FROM usuarios WHERE id = ?",
+      [usuario_id]
+    );
+    if (user) res.json({ success: true, user });
+    else
+      res
+        .status(404)
+        .json({ success: false, message: "Usuario no encontrado" });
+  } catch (err) {
+    console.error("Error SQL GET /usuarios/:usuario_id", err);
+    res.status(500).json({ success: false, error: err });
+  }
+});
 
 app.post("/presupuestos", async (req, res) => {
   const { usuario_id, categoria_id, monto_mensual, mes, anio } = req.body;
@@ -204,6 +222,9 @@ app.post("/transacciones", async (req, res) => {
     const fechaObj = new Date(fecha);
     const mes = fechaObj.getMonth() + 1;
     const anio = fechaObj.getFullYear();
+    console.log(
+      `🔍 Debug fecha: ${fecha}, mes=${mes}, anio=${anio}, categoria_id=${categoria_id}`
+    );
     // Obtener monto mensual del presupuesto vigente
     const [[budgetInfo]] = await dbPool.query(
       `SELECT monto_mensual FROM presupuestos
@@ -211,32 +232,60 @@ app.post("/transacciones", async (req, res) => {
        ORDER BY id DESC LIMIT 1`,
       [usuario_id, categoria_id, mes, anio]
     );
+    console.log("🔍 Debug budgetInfo returned:", budgetInfo);
     if (budgetInfo) {
-      // Calcular total egresos hasta ahora
+      // Calcular total egresos hasta ahora y convertir a número
       const [[{ spent }]] = await dbPool.query(
         `SELECT COALESCE(SUM(CASE WHEN tipo='egreso' THEN monto ELSE 0 END), 0) AS spent
-         FROM transacciones
-         WHERE usuario_id=? AND categoria_id=? AND MONTH(fecha)=? AND YEAR(fecha)=?`,
+           FROM transacciones
+           WHERE usuario_id=? AND categoria_id=? AND MONTH(fecha)=? AND YEAR(fecha)=?`,
         [usuario_id, categoria_id, mes, anio]
       );
+      const spentNum = Number(spent);
+      const montoNum = Number(monto);
+      const budgetNum = Number(budgetInfo.monto_mensual);
+      // Debug: imprimir valores de presupuesto
+      console.log(
+        `🔍 Debug presupuesto: spent=${spentNum}, nuevoMonto=${montoNum}, presupuesto=${budgetNum}`
+      );
       // Si el nuevo monto supera el presupuesto
-      if (spent + Number(monto) > budgetInfo.monto_mensual) {
-        // Enviar aviso de presupuesto excedido y cancelar registro
+      if (spentNum + montoNum > budgetNum) {
+        // Enviar aviso de presupuesto excedido y registrar notificación
         const [[{ email, nombre }]] = await dbPool.query(
           "SELECT email, nombre FROM usuarios WHERE id = ?",
           [usuario_id]
         );
         const asunto = "Transacción cancelada: presupuesto excedido";
-        const html = `<p>Hola <strong>${nombre}</strong>,</p>
-          <p>No puedes realizar esta transacción de $${Number(monto).toFixed(
-            2
-          )} en esta categoría, pues excede tu presupuesto mensual de $${Number(
+        const mensajeNoti = `Transacción cancelada de $${Number(monto).toFixed(
+          2
+        )}: excede tu presupuesto mensual de $${Number(
           budgetInfo.monto_mensual
-        ).toFixed(2)}.</p>`;
+        ).toFixed(2)} para esta categoría.`;
+        const html = `<p>Hola <strong>${nombre}</strong>,</p><p>No puedes realizar esta transacción de <strong>$${Number(
+          monto
+        ).toFixed(
+          2
+        )}</strong> en esta categoría, pues excede tu presupuesto mensual de <strong>$${Number(
+          budgetInfo.monto_mensual
+        ).toFixed(2)}</strong>.</p>`;
         await enviarEmail(email, asunto, html);
-        return res
-          .status(400)
-          .json({ success: false, error: "Presupuesto excedido" });
+        // Registrar notificación de bloqueo por presupuesto excedido
+        await dbPool.query(
+          "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'exceso_presupuesto', 0, NOW())",
+          [usuario_id, mensajeNoti]
+        );
+        return res.status(400).json({
+          success: false,
+          error: "Presupuesto excedido",
+          spent: spentNum,
+          budget: budgetNum,
+        });
+      } else {
+        console.log(
+          `✅ Transacción permitida: ${spentNum} + ${montoNum} = ${
+            spentNum + montoNum
+          } <= ${budgetNum}`
+        );
       }
     }
   }
@@ -343,8 +392,9 @@ app.post("/transacciones", async (req, res) => {
             const asuntoAcerc = "Alerta: Presupuesto cercano al límite";
             const htmlAcerc = `<p>Hola <strong>${nombre}</strong>,</p><p>${acercMsg}</p>`;
             await enviarEmail(email, asuntoAcerc, htmlAcerc);
+            // Registrar alerta de presupuesto cercano al límite
             await dbPool.query(
-              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'presupuesto_excedido', 0, NOW())",
+              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'alerta_pago', 0, NOW())",
               [usuario_id, acercMsg]
             );
             console.log(
@@ -362,10 +412,10 @@ app.post("/transacciones", async (req, res) => {
           const asuntoPres = "Alerta: Presupuesto Excedido";
           const htmlPres = `<p>Hola <strong>${nombre}</strong>,</p><p>${overMsg}</p>`;
           await enviarEmail(email, asuntoPres, htmlPres);
-          // Registrar notificación de presupuesto excedido (usar 'exceso_presu')
+          // Registrar notificación de presupuesto excedido (usar enum correcto)
           try {
             await dbPool.query(
-              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'exceso_presu', 0, NOW())",
+              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'exceso_presupuesto', 0, NOW())",
               [usuario_id, overMsg]
             );
             console.log(
@@ -763,6 +813,44 @@ app.put("/notificaciones/:id/leido", async (req, res) => {
     res.json({ success: true, message: "Notificación marcada como leída" });
   } catch (err) {
     console.error("Error SQL al marcar notificación leída:", err);
+    res.status(500).json({ success: false, error: err });
+  }
+});
+
+// Obtener perfil de usuario
+app.get("/usuario/:usuario_id", async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const [[user]] = await dbPool.query(
+      "SELECT id, nombre, apellidos, email, telefono FROM usuarios WHERE id = ?",
+      [usuario_id]
+    );
+    if (user) res.json({ success: true, user });
+    else
+      res
+        .status(404)
+        .json({ success: false, message: "Usuario no encontrado" });
+  } catch (err) {
+    console.error("Error SQL GET /usuario/:usuario_id", err);
+    res.status(500).json({ success: false, error: err });
+  }
+});
+// Actualizar perfil de usuario
+app.put("/usuario/:usuario_id", async (req, res) => {
+  const { usuario_id } = req.params;
+  const { nombre, apellidos, email, telefono } = req.body;
+  try {
+    await dbPool.query(
+      "UPDATE usuarios SET nombre = ?, apellidos = ?, email = ?, telefono = ? WHERE id = ?",
+      [nombre, apellidos, email, telefono, usuario_id]
+    );
+    const [[user]] = await dbPool.query(
+      "SELECT id, nombre, apellidos, email, telefono FROM usuarios WHERE id = ?",
+      [usuario_id]
+    );
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error("Error SQL PUT /usuario/:usuario_id", err);
     res.status(500).json({ success: false, error: err });
   }
 });

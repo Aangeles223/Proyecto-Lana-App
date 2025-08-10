@@ -50,11 +50,25 @@ function filtrarPagosProximos(pagos) {
 // Ejecuta el pago hoy si diffDays===0 y marca pagado
 async function ejecutarPago(usuario_id, pago) {
   if (pago.diffDays === 0) {
-    await dbPool.query(
+    // Crear transacción de pago fijo
+    const [result] = await dbPool.query(
       `INSERT INTO transacciones (usuario_id, categoria_id, monto, tipo, fecha, descripcion)
        VALUES (?, ?, ?, 'egreso', NOW(), ?)`,
       [usuario_id, pago.categoria_id, pago.monto, `Pago fijo: ${pago.nombre}`]
     );
+    const transaccionId = result.insertId;
+    // Registrar en registros_automaticos
+    try {
+      await dbPool.query(
+        "INSERT INTO registros_automaticos (transaccion_id, origen) VALUES (?, 'pago_fijo')",
+        [transaccionId]
+      );
+      console.log(
+        `📝 Registro automático generado para transacción ${transaccionId}`
+      );
+    } catch (regErr) {
+      console.error("Error al guardar registro automático:", regErr);
+    }
     await dbPool.query(
       `UPDATE pagos_fijos SET pagado = 1, ultima_fecha = NOW() WHERE id = ?`,
       [pago.id]
@@ -108,7 +122,7 @@ async function revisarAlertas() {
         try {
           for (const p of hechos) {
             await dbPool.query(
-              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'pago_fijo', 0, NOW())",
+              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'pago_registrado', 0, NOW())",
               [
                 u.id,
                 `Pago fijo ${p.nombre} ejecutado: $${Number(p.monto).toFixed(
@@ -134,15 +148,32 @@ async function revisarAlertas() {
         const items = reminder
           .map((p) => `<li>${p.nombre}: en ${p.diffDays} día(s)</li>`)
           .join("");
-        await enviarEmail(
-          u.email,
-          "Recordatorio: próximos pagos fijos",
-          `<p>Hola <strong>${
-            u.nombre
-          }</strong>,</p><ul>${items}</ul><p>Saldo actual: $${saldo.toFixed(
-            2
-          )}</p>`
-        );
+        const subject = "Recordatorio: próximos pagos fijos";
+        const html = `<p>Hola <strong>${
+          u.nombre
+        }</strong>,</p><ul>${items}</ul><p>Saldo actual: $${saldo.toFixed(
+          2
+        )}</p>`;
+        await enviarEmail(u.email, subject, html);
+        // Registrar notificaciones de recordatorio de pagos fijos
+        try {
+          const msg = `Recordatorio de pagos próximos: ${reminder
+            .map((p) => p.nombre + " en " + p.diffDays + " día(s)")
+            .join(", ")}`;
+          // Insert notification with correct enum type
+          await dbPool.query(
+            "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'recordatorio', 0, NOW())",
+            [u.id, msg]
+          );
+          console.log(
+            `🔔 Notificación de recordatorio registrada para usuario ${u.id}`
+          );
+        } catch (notifErr) {
+          console.error(
+            "Error al guardar notificación de recordatorio:",
+            notifErr
+          );
+        }
       }
     }
   } catch (err) {

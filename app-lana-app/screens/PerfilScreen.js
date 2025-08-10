@@ -8,14 +8,17 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
-// Determinar base URL
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
-const BASE_URL = `http://${host}:3000`;
+// Host detection según Expo debuggerHost o IP fija
+const manifest = Constants.manifest || {};
+const debuggerHost = manifest.debuggerHost?.split(":")[0];
+const devHost = debuggerHost || "10.0.0.11"; // IP de tu máquina en LAN
+const BASE_URL = `http://${devHost}:3000`;
 
 const { width } = Dimensions.get("window");
 

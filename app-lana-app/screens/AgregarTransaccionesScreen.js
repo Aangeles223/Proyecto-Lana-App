@@ -18,6 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
 import Constants from "expo-constants";
 import { Picker } from "@react-native-picker/picker";
+import { useFocusEffect } from "@react-navigation/native";
 
 // Determina host según Expo debuggerHost o IP fija
 const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
@@ -41,6 +42,7 @@ export default function AgregarTransaccionScreen({ navigation }) {
   const [showDate, setShowDate] = useState(false);
   const [descripcion, setDescripcion] = useState("");
   const [tipo, setTipo] = useState("egreso");
+  const [notifsCount, setNotifsCount] = useState(0);
 
   // Cargar categorías desde la BD
   useEffect(() => {
@@ -67,6 +69,28 @@ export default function AgregarTransaccionScreen({ navigation }) {
     };
     fetchCategorias();
   }, []);
+
+  // Fetch unread notifications count on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchNotifs = async () => {
+        try {
+          const userStr = await AsyncStorage.getItem("user");
+          if (!userStr) return;
+          const { id: usuario_id } = JSON.parse(userStr);
+          const res = await fetch(`${BASE_URL}/notificaciones/${usuario_id}`);
+          const data = await res.json();
+          const unread = Array.isArray(data)
+            ? data.filter((n) => n.leido === 0).length
+            : 0;
+          setNotifsCount(unread);
+        } catch (e) {
+          console.error("Error fetching notification count:", e);
+        }
+      };
+      fetchNotifs();
+    }, [])
+  );
 
   const handleAgregar = async () => {
     if (!monto || isNaN(Number(monto))) {
@@ -108,7 +132,14 @@ export default function AgregarTransaccionScreen({ navigation }) {
       });
       const data = await res.json();
       if (data.success === false) {
-        Alert.alert("Error", "No se pudo agregar la transacción.");
+        if (data.error === "Presupuesto excedido") {
+          Alert.alert(
+            "Presupuesto excedido",
+            "Esta transacción excede tu presupuesto mensual para esta categoría."
+          );
+        } else {
+          Alert.alert("Error", "No se pudo agregar la transacción.");
+        }
         return;
       }
       // Programar notificación local
@@ -138,8 +169,16 @@ export default function AgregarTransaccionScreen({ navigation }) {
           <View style={styles.logoContainer}>
             <LogoLana />
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notificaciones")}
+            style={styles.bellContainer}
+          >
             <Ionicons name="notifications-outline" size={28} color="#222" />
+            {notifsCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notifsCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
         <View style={styles.centerContent}>
@@ -418,4 +457,17 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buttonText: { color: "#fff", fontSize: 20, fontFamily: "serif" },
+  bellContainer: { position: "relative", padding: 8 },
+  badge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "red",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: { color: "white", fontSize: 10, fontWeight: "bold" },
 });

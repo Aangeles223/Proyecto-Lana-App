@@ -14,6 +14,7 @@ import LogoLana from "../components/LogoLana";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import CategoryIcon from "../components/CategoryIcon";
 
 // Host detection
 const manifest = Constants.manifest || {};
@@ -137,8 +138,8 @@ export default function PresupuestosScreen({ navigation }) {
                 }
                 activeOpacity={0.8}
               >
-                <Ionicons
-                  name="ios-wallet"
+                <CategoryIcon
+                  categoria={p.categoria}
                   size={32}
                   color="#1976d2"
                   style={{ marginRight: 10 }}
