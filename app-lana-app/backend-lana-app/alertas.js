@@ -11,12 +11,12 @@ const dbConfig = {
   database: "lana_app",
 };
 
-// Config Nodemailer (Gmail SMTP)
+// Config Nodemailer
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "kripxxloa@gmail.com",
-    pass: "ztvrzdbowlxe rtke".replace(/\s/g, ""), // elimina espacios si hay
+    pass: "ztvrzdbowlxertke".replace(/\s/g, ""),
   },
 });
 
@@ -30,7 +30,7 @@ async function enviarEmail(to, subject, html) {
   });
 }
 
-// Obtener saldo total del usuario
+// Obtener saldo total
 async function obtenerSaldo(db, usuario_id) {
   const [rows] = await db.execute(
     `SELECT tipo, monto FROM transacciones WHERE usuario_id = ?`,
@@ -38,24 +38,17 @@ async function obtenerSaldo(db, usuario_id) {
   );
 
   let saldo = 0;
-  if (!Array.isArray(rows)) {
-    console.warn(`No se obtuvo un array de transacciones para usuario_id=${usuario_id}`);
-    return saldo;
-  }
-
   rows.forEach(({ tipo, monto }) => {
     const montoNum = Number(monto);
-    if (isNaN(montoNum)) {
-      console.warn(`Monto inválido para usuario_id=${usuario_id}:`, monto);
-      return;
+    if (!isNaN(montoNum)) {
+      saldo += tipo === "ingreso" ? montoNum : -montoNum;
     }
-    saldo += tipo === "ingreso" ? montoNum : -montoNum;
   });
 
   return saldo;
 }
 
-// Obtener pagos fijos próximos (en 2 días)
+// Pagos próximos (0 a 2 días)
 async function obtenerPagosProximos(db, usuario_id) {
   const [pagos] = await db.execute(
     `SELECT * FROM pagos_fijos WHERE usuario_id = ? AND activo = 1 AND pagado = 0`,
@@ -63,21 +56,19 @@ async function obtenerPagosProximos(db, usuario_id) {
   );
 
   const hoy = moment();
-  const proximos = pagos.filter((pago) => {
+  return pagos.filter((pago) => {
     let fechaPago = moment(hoy).date(pago.dia_pago);
-    if (fechaPago.isBefore(hoy)) fechaPago.add(1, "month");
+    if (fechaPago.isBefore(hoy, "day")) fechaPago.add(1, "month");
     const diffDias = fechaPago.diff(hoy, "days");
     return diffDias >= 0 && diffDias <= 2;
   });
-
-  return proximos;
 }
 
-// Crear resumen HTML para el email con los pagos próximos
-function crearResumenPagosHTML(pagosProximos) {
-  if (pagosProximos.length === 0) return "<p>No hay pagos próximos.</p>";
+// Resumen HTML
+function crearResumenPagosHTML(pagos) {
+  if (pagos.length === 0) return "<p>No hay pagos próximos.</p>";
 
-  const filas = pagosProximos
+  const filas = pagos
     .map(
       (pago) =>
         `<tr><td>${pago.nombre}</td><td>$${Number(pago.monto).toFixed(
@@ -87,7 +78,7 @@ function crearResumenPagosHTML(pagosProximos) {
     .join("");
 
   return `
-    <p>A continuación se muestra un resumen de tus pagos fijos próximos:</p>
+    <p>Pagos:</p>
     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
       <thead>
         <tr>
@@ -103,14 +94,42 @@ function crearResumenPagosHTML(pagosProximos) {
   `;
 }
 
-// Función para revisar alertas y enviar si aplica
+// Ejecutar pago y registrar
+async function ejecutarPago(db, usuario_id, pago, pagosEjecutados) {
+  const hoy = moment();
+  const fechaPago = moment(hoy).date(pago.dia_pago);
+  if (fechaPago.isBefore(hoy, "day")) fechaPago.add(1, "month");
+
+  const diffDias = fechaPago.diff(hoy, "days");
+
+  if (diffDias === 0) {
+    try {
+      // Egreso
+      await db.execute(
+        `INSERT INTO transacciones (usuario_id, tipo, monto, fecha) VALUES (?, 'egreso', ?, NOW())`,
+        [usuario_id, pago.monto]
+      );
+
+      // Marcar como pagado
+      await db.execute(
+        `UPDATE pagos_fijos SET pagado = 1, ultima_fecha = NOW() WHERE id = ?`,
+        [pago.id]
+      );
+
+      pagosEjecutados.push(pago);
+
+      console.log(`✅ Pago ejecutado: usuario=${usuario_id}, pago=${pago.nombre}, monto=${pago.monto}`);
+    } catch (error) {
+      console.error(`❌ Error ejecutando pago usuario=${usuario_id}`, error);
+    }
+  }
+}
+
+// Revisión diaria
 async function revisarAlertas() {
   const db = await mysql.createConnection(dbConfig);
   try {
-    // Obtener usuarios
-    const [usuarios] = await db.execute(
-      `SELECT id, nombre, email FROM usuarios`
-    );
+    const [usuarios] = await db.execute(`SELECT id, nombre, email FROM usuarios`);
 
     for (const usuario of usuarios) {
       const saldo = await obtenerSaldo(db, usuario.id);
@@ -120,71 +139,51 @@ async function revisarAlertas() {
         0
       );
 
-      if (pagosProximos.length === 0) {
-        console.log(
-          `Usuario ${usuario.nombre} no tiene pagos próximos, no se envía alerta.`
-        );
-        continue; // No hay pagos próximos
+      let pagosEjecutados = [];
+
+      // Ejecutar si es el día exacto
+      for (const pago of pagosProximos) {
+        await ejecutarPago(db, usuario.id, pago, pagosEjecutados);
       }
 
-      if (typeof saldo !== "number" || isNaN(saldo)) {
-        console.warn(
-          `Saldo inválido para usuario ${usuario.nombre}, saltando alerta.`
-        );
-        continue;
-      }
-
-      const saldoFormatted = saldo.toFixed(2);
-      const montoFormatted = montoTotalProximos.toFixed(2);
-      const resumenHTML = crearResumenPagosHTML(pagosProximos);
-
-      if (saldo < montoTotalProximos) {
-        // Saldo insuficiente: alerta urgente
+      // Si hubo pagos ejecutados, mandar correo resumen
+      if (pagosEjecutados.length > 0 && usuario.email) {
+        const resumenHTML = crearResumenPagosHTML(pagosEjecutados);
         const mensajeHTML = `
           <p>Hola <strong>${usuario.nombre}</strong>,</p>
-          <p>Tu saldo actual es <strong>$${saldoFormatted}</strong> y tienes pagos fijos próximos por un total de <strong>$${montoFormatted}</strong>.</p>
+          <p>Hoy se ejecutaron los siguientes pagos automáticamente:</p>
           ${resumenHTML}
-          <p><strong>Por favor, revisa tu presupuesto para evitar retrasos en tus pagos.</strong></p>
-          <p>Saludos,<br><em>Equipo Lana App</em></p>
+          <p>Saldo antes de pagos: <strong>$${saldo.toFixed(2)}</strong></p>
+          <p>Saldo después: <strong>$${(saldo - pagosEjecutados.reduce((s,p)=>s+Number(p.monto),0)).toFixed(2)}</strong></p>
         `;
-
-        if (usuario.email) {
-          try {
-            await enviarEmail(
-              usuario.email,
-              "Alerta: saldo insuficiente para pagos próximos",
-              mensajeHTML
-            );
-            console.log(
-              `Email ENVIADO a ${usuario.email} | Usuario: ${usuario.nombre} | Saldo: $${saldoFormatted} | Pagos próximos: $${montoFormatted}`
-            );
-          } catch (e) {
-            console.error(`Error enviando email a ${usuario.email}`, e);
-          }
+        try {
+          await enviarEmail(usuario.email, "Resumen de pagos ejecutados hoy", mensajeHTML);
+          console.log(`📧 Correo de pagos ejecutados enviado a ${usuario.email}`);
+        } catch (e) {
+          console.error(`Error enviando correo de pagos ejecutados a ${usuario.email}`, e);
         }
-      } else {
-        // Saldo suficiente: solo recordatorio
-        const mensajeHTML = `
-          <p>Hola <strong>${usuario.nombre}</strong>,</p>
-          <p>Tu saldo actual es <strong>$${saldoFormatted}</strong> y tienes pagos fijos próximos por un total de <strong>$${montoFormatted}</strong>.</p>
-          ${resumenHTML}
-          <p>Recuerda preparar tus pagos para evitar retrasos.</p>
-          <p>Saludos,<br><em>Equipo Lana App</em></p>
-        `;
+      }
 
-        if (usuario.email) {
-          try {
-            await enviarEmail(
-              usuario.email,
-              "Recordatorio: tienes pagos próximos",
-              mensajeHTML
-            );
-            console.log(
-              `Recordatorio enviado a ${usuario.email} | Usuario: ${usuario.nombre} | Saldo: $${saldoFormatted} | Pagos próximos: $${montoFormatted}`
-            );
-          } catch (e) {
-            console.error(`Error enviando recordatorio a ${usuario.email}`, e);
-          }
+      // Si no tiene pagos hoy pero sí próximos, mandar alerta
+      if (pagosProximos.length > 0) {
+        const resumenHTML = crearResumenPagosHTML(pagosProximos);
+        if (saldo < montoTotalProximos) {
+          const mensajeHTML = `
+            <p>Hola <strong>${usuario.nombre}</strong>,</p>
+            <p>Saldo actual: <strong>$${saldo.toFixed(2)}</strong></p>
+            <p>Pagos próximos por un total de: <strong>$${montoTotalProximos.toFixed(2)}</strong></p>
+            ${resumenHTML}
+            <p><strong>Saldo insuficiente para cubrir pagos próximos.</strong></p>
+          `;
+          await enviarEmail(usuario.email, "Alerta: saldo insuficiente para pagos próximos", mensajeHTML);
+        } else {
+          const mensajeHTML = `
+            <p>Hola <strong>${usuario.nombre}</strong>,</p>
+            <p>Saldo actual: <strong>$${saldo.toFixed(2)}</strong></p>
+            ${resumenHTML}
+            <p>Recuerda que tienes pagos próximos en los próximos días.</p>
+          `;
+          await enviarEmail(usuario.email, "Recordatorio: pagos próximos", mensajeHTML);
         }
       }
     }
@@ -195,11 +194,30 @@ async function revisarAlertas() {
   }
 }
 
-// Programar tarea diaria a las 8:00 AM
+// Reset mensual de pagos
+async function resetPagosMensual() {
+  const db = await mysql.createConnection(dbConfig);
+  try {
+    await db.execute(`UPDATE pagos_fijos SET pagado = 0`);
+    console.log(`🔄 Pagos reiniciados para nuevo mes: ${moment().format("YYYY-MM-DD")}`);
+  } catch (err) {
+    console.error("Error en resetPagosMensual:", err);
+  } finally {
+    await db.end();
+  }
+}
+
+// CRON diario 8 AM para revisar pagos
 cron.schedule("0 8 * * *", () => {
-  console.log("Ejecutando revisión diaria de alertas: ", new Date());
+  console.log("⏰ Revisando alertas:", new Date());
   revisarAlertas();
 });
 
-// Para pruebas rápidas, ejecuta revisarAlertas() directamente
+// CRON mensual el día 1 a las 00:05 para reiniciar pagos
+cron.schedule("5 0 1 * *", () => {
+  console.log("⏳ Reiniciando estado de pagos:", new Date());
+  resetPagosMensual();
+});
+
+// Para pruebas manuales
 revisarAlertas();
