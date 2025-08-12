@@ -16,7 +16,7 @@ import Constants from "expo-constants";
 // Host detection según Expo debuggerHost o IP fija
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
-const devHost = debuggerHost || "10.0.0.11";
+const devHost = debuggerHost || "172.20.10.6";
 const BASE_URL = `http://${devHost}:3000`;
 
 export default function NotificacionesScreen({ navigation }) {

@@ -21,7 +21,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 
 // Determina host según Expo debuggerHost o IP fija
-const host = Constants.manifest?.debuggerHost?.split(":")[0] || "10.0.0.11";
+const host = Constants.manifest?.debuggerHost?.split(":")[0] || "172.20.10.6";
 const BASE_URL = `http://${host}:3000`;
 
 // Mapeo de nombres de categoría a iconos

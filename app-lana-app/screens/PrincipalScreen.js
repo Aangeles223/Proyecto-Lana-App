@@ -23,7 +23,7 @@ import { Platform } from "react-native";
 const manifest = Constants.manifest || {};
 let host = manifest.debuggerHost?.split(":")[0];
 if (!host || host === "localhost" || host === "127.0.0.1") {
-  host = Platform.OS === "android" ? "10.0.2.2" : "10.0.0.11";
+  host = Platform.OS === "android" ? "10.0.2.2" : "172.20.10.6";
 }
 const BASE_URL = `http://${host}:3000`;
 console.log("🔗 BASE_URL PrincipalScreen:", BASE_URL);

@@ -24,7 +24,7 @@ if (!host || host === "localhost" || host === "127.0.0.1") {
   if (Platform.OS === "android") {
     host = "10.0.2.2";
   } else {
-    host = "10.0.0.11";
+    host = "172.20.10.6";
   }
 }
 const BASE_URL = `http://${host}:3000`;

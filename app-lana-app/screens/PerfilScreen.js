@@ -19,7 +19,7 @@ import SeguridadScreen from "./SeguridadScreen";
 // Host detection según Expo debuggerHost o IP fija
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
-const devHost = debuggerHost || "10.0.0.11"; // IP de tu máquina en LAN
+const devHost = debuggerHost || "172.20.10.6"; // IP de tu máquina en LAN
 const BASE_URL = `http://${devHost}:3000`;
 
 const { width } = Dimensions.get("window");

@@ -17,7 +17,7 @@ import Constants from "expo-constants";
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
 const host =
-  debuggerHost || (Platform.OS === "android" ? "10.0.2.2" : "10.0.0.11");
+  debuggerHost || (Platform.OS === "android" ? "10.0.2.2" : "172.20.10.6");
 const BASE_URL = `http://${host}:3000`;
 
 export default function AyudaScreen({ navigation }) {

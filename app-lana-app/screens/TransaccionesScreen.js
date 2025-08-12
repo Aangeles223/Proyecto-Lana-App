@@ -20,7 +20,7 @@ import CategoryIcon from "../components/CategoryIcon";
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
 // Preferir host del debugger, si no, usar IP LAN de desarrollo
-const devHost = debuggerHost || "10.0.0.11";
+const devHost = debuggerHost || "172.20.10.6";
 const BASE_URL = `http://${devHost}:3000`; // Express proxy endpoint
 
 // Category to icon mapping

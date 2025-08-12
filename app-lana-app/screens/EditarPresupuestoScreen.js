@@ -21,7 +21,7 @@ import * as Notifications from "expo-notifications";
 // Determinar base URL según Expo debuggerHost o IP de la máquina (LAN)
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
-const host = debuggerHost || "10.0.0.11";
+const host = debuggerHost || "172.20.10.6";
 const BASE_URL = `http://${host}:3000`;
 console.log("BASE_URL EditarPresupuestoScreen:", BASE_URL);
 console.log("BASE_URL EditarPresupuestoScreen:", BASE_URL);

@@ -18,7 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 const manifest = Constants.manifest || {};
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
-const host = debuggerHost || "10.0.0.11";
+const host = debuggerHost || "172.20.10.6";
 const BASE_URL = `http://${host}:3000`;
 
 // Puedes ajustar los colores según tus categorías reales
