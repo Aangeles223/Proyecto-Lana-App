@@ -123,7 +123,7 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
             </View>
             <View style={styles.cardWrapper}>
               {/* Avatar en círculo blanco */}
-              <View style={styles.avatarModal}>
+              /*<View style={styles.avatarModal}>
                 <Image
                   source={{
                     uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
@@ -150,7 +150,7 @@ export default function LoginScreen({ navigation, setIsLoggedIn }) {
                     style={styles.inputIcon}
                   />
                 </View>
-                {/* Input Password */}
+                {/* Input Password */ }
                 <View style={styles.inputBox}>
                   <TextInput
                     placeholder="Contraseña"
