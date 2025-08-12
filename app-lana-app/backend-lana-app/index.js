@@ -757,7 +757,7 @@ app.post("/pagos_fijos", async (req, res) => {
         await enviarEmail(user.email, asunto, html);
         await dbPool.query(
           `INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio)
-           VALUES (?, ?, 'email', 'pago_fijo', 0, NOW())`,
+           VALUES (?, ?, 'email', 'pago_registrado', 0, NOW())`,
           [
             usuario_id,
             `Pago fijo ${nombre} creado por $${Number(monto).toFixed(2)}`,
