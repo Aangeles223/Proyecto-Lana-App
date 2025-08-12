@@ -164,21 +164,6 @@ export default function PerfilScreen({ navigation }) {
       >
         <Text style={styles.buttonText}>{editando ? "Guardar" : "Editar"}</Text>
       </TouchableOpacity>
-      {/* Botones de Configuración y Seguridad */}
-      <View style={styles.footerButtons}>
-        <TouchableOpacity
-          style={[styles.button, styles.smallButton]}
-          onPress={() => navigation.navigate("Configuracion")}
-        >
-          <Text style={styles.buttonText}>Configuración</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.smallButton]}
-          onPress={() => navigation.navigate("Seguridad")}
-        >
-          <Text style={styles.buttonText}>Seguridad</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

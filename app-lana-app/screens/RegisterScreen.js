@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Alert,
 } from "react-native";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -53,10 +54,16 @@ export default function RegisterScreen({ navigation }) {
       console.log("Response status:", res.status);
       const data = await res.json();
       console.log("Response data:", data);
-      if (res.ok && data.id) {
-        setSuccess("Registro exitoso. Por favor inicia sesión.");
+      if (res.ok && (data.success || data.insertId)) {
+        // Mostrar alerta de éxito y navegar al Login al presionar OK
+        Alert.alert(
+          "Registro exitoso",
+          "Usuario registrado correctamente",
+          [{ text: "OK", onPress: () => navigation.navigate("Login") }],
+          { cancelable: false }
+        );
         setError("");
-        navigation.navigate("Login");
+        setSuccess("");
       } else {
         setError(data.error || "Error al registrar usuario");
         setSuccess("");
