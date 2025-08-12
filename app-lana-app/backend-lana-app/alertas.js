@@ -69,8 +69,12 @@ async function ejecutarPago(usuario_id, pago) {
     } catch (regErr) {
       console.error("Error al guardar registro automático:", regErr);
     }
+    // Actualizar última fecha al mes siguiente para el próximo ciclo de pago
     await dbPool.query(
-      `UPDATE pagos_fijos SET pagado = 1, ultima_fecha = NOW() WHERE id = ?`,
+      `UPDATE pagos_fijos 
+         SET pagado = 1,
+             ultima_fecha = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+       WHERE id = ?`,
       [pago.id]
     );
     console.log(`✅ Pago ejecutado para usuario ${usuario_id}: ${pago.nombre}`);
@@ -81,11 +85,13 @@ async function ejecutarPago(usuario_id, pago) {
 
 // Revisión diaria de pagos y recordatorios
 async function revisarAlertas() {
+  console.log("🔄 iniciar revisarAlertas");
   try {
     const [usuarios] = await dbPool.query(
       "SELECT id, nombre, email FROM usuarios"
     );
     for (const u of usuarios) {
+      console.log(`Usuario ${u.id} (${u.nombre}) - email: ${u.email}`);
       // Calcular saldo actual
       const [hist] = await dbPool.query(
         "SELECT tipo, monto FROM transacciones WHERE usuario_id = ?",
@@ -101,10 +107,26 @@ async function revisarAlertas() {
         "SELECT * FROM pagos_fijos WHERE usuario_id = ? AND activo = 1 AND pagado = 0",
         [u.id]
       );
+      console.log(
+        `  Pagos totales en DB: ${pagos.length}`,
+        pagos.map((p) => ({ id: p.id, dia_pago: p.dia_pago }))
+      );
       const proximos = filtrarPagosProximos(pagos);
+      console.log(
+        `  Pagos próximos a ejecutar/recordar (diffDays 0-2):`,
+        proximos.map((p) => ({
+          id: p.id,
+          nombre: p.nombre,
+          diffDays: p.diffDays,
+        }))
+      );
       // Ejecutar pagos de hoy
       const hechos = [];
       for (const p of proximos) if (await ejecutarPago(u.id, p)) hechos.push(p);
+      console.log(
+        `  Pagos ejecutados hoy:`,
+        hechos.map((p) => p.id)
+      );
       if (hechos.length) {
         const lista = hechos
           .map((p) => `<li>${p.nombre}: $${Number(p.monto).toFixed(2)}</li>`)
@@ -199,19 +221,12 @@ cron.schedule("5 0 1 * *", () => {
   console.log("⏳ Reiniciando estado de pagos:", new Date());
   resetPagosMensual();
 });
-cron.schedule("5 0 1 * *", () => {
-  console.log("⏳ Reiniciando estado de pagos:", new Date());
-  resetPagosMensual();
-});
-// Cron: diario a las 8 AM
-cron.schedule("0 8 * * *", () => {
-  console.log("⏰ Revisando pagos fijos:", new Date());
+// Dev: ejecutar revisarAlertas cada minuto para ver recordatorios inmediatos
+cron.schedule("* * * * *", () => {
+  console.log("⏱️ Dev cron - revisarAlertas cada minuto:", new Date());
   revisarAlertas();
 });
-// Cron: reset mensual día 1 a las 00:05
-cron.schedule("5 0 1 * *", () => {
-  console.log("⏳ Reiniciando estado de pagos:", new Date());
-  resetPagosMensual();
-});
+// Ejecutar revisión de alertas al iniciar (para envío inmediato de recordatorios)
+revisarAlertas();
 // Exportar función de envío de correo
 module.exports = { enviarEmail };

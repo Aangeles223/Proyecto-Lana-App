@@ -13,6 +13,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import ConfiguracionScreen from "./ConfiguracionScreen";
+import SeguridadScreen from "./SeguridadScreen";
 
 // Host detection según Expo debuggerHost o IP fija
 const manifest = Constants.manifest || {};
@@ -162,6 +164,21 @@ export default function PerfilScreen({ navigation }) {
       >
         <Text style={styles.buttonText}>{editando ? "Guardar" : "Editar"}</Text>
       </TouchableOpacity>
+      {/* Botones de Configuración y Seguridad */}
+      <View style={styles.footerButtons}>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton]}
+          onPress={() => navigation.navigate("Configuracion")}
+        >
+          <Text style={styles.buttonText}>Configuración</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton]}
+          onPress={() => navigation.navigate("Seguridad")}
+        >
+          <Text style={styles.buttonText}>Seguridad</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -262,5 +279,15 @@ const styles = StyleSheet.create({
     color: "#222",
     fontSize: 18,
     fontFamily: "serif",
+  },
+  footerButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  smallButton: {
+    width: "40%",
   },
 });

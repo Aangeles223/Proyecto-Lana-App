@@ -8,7 +8,7 @@ import LoginScreen from "./screens/LoginScreen";
 import PrincipalScreen from "./screens/PrincipalScreen";
 import AyudaScreen from "./screens/AyudaScreen";
 import MenuScreen from "./screens/MenuScreen";
-import { MaterialIcons, Feather, Entypo } from "@expo/vector-icons";
+import { MaterialIcons, Feather, Entypo, Ionicons } from "@expo/vector-icons";
 import TransaccionesScreen from "./screens/TransaccionesScreen";
 import PerfilScreen from "./screens/PerfilScreen";
 import DineroMontoScreen from "./screens/DineroMontoScreen";
@@ -25,6 +25,10 @@ import EditarPagoFijoScreen from "./screens/EditarPagoFijoScreen";
 import SplashScreen from "./screens/SplashScreen";
 import InactivityHandler from "./components/InactivityHandler";
 import NotificacionesScreen from "./screens/NotificacionesScreen";
+import ContactUsScreen from "./screens/ContactUsScreen";
+import FeedbackScreen from "./screens/FeedbackScreen";
+import ConfiguracionScreen from "./screens/ConfiguracionScreen";
+import SeguridadScreen from "./screens/SeguridadScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -159,6 +163,13 @@ export default function App() {
               name="Transacciones"
               component={TransaccionesScreen}
             />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+            <Stack.Screen name="Feedback" component={FeedbackScreen} />
+            <Stack.Screen
+              name="Configuracion"
+              component={ConfiguracionScreen}
+            />
+            <Stack.Screen name="Seguridad" component={SeguridadScreen} />
           </>
         ) : (
           <>

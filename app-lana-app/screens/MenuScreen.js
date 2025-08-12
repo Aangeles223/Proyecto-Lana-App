@@ -90,16 +90,22 @@ export default function MenuScreen({ navigation, onLogout }) {
           />
           <Text style={styles.menuText}>Perfil</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuBtn}>
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => navigation.navigate("Configuracion")}
+        >
           <FontAwesome5
             name="user-cog"
             size={28}
             color="#222"
             style={styles.menuIcon}
           />
-          <Text style={styles.menuText}>Configuracion</Text>
+          <Text style={styles.menuText}>Configuración</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuBtn}>
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => navigation.navigate("Seguridad")}
+        >
           <MaterialIcons
             name="security"
             size={28}

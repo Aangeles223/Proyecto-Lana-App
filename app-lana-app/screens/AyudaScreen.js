@@ -90,11 +90,17 @@ export default function AyudaScreen({ navigation }) {
           </>
         ) : (
           <>
-            <TouchableOpacity style={styles.optionBtn}>
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={() => navigation.navigate("ContactUs")}
+            >
               <Text style={styles.optionText}>Contáctanos</Text>
               <Ionicons name="chevron-forward" size={24} color="#222" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.optionBtn}>
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={() => navigation.navigate("Feedback")}
+            >
               <Text style={styles.optionText}>Ayúdanos a mejorar</Text>
               <Ionicons name="chevron-forward" size={24} color="#222" />
             </TouchableOpacity>

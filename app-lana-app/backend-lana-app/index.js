@@ -216,8 +216,35 @@ app.post("/transacciones", async (req, res) => {
       .status(400)
       .json({ success: false, error: "categoria_id es obligatorio" });
   }
-  // Bloquear transacción si excede presupuesto mensual
+  // Bloquear transacción si excede presupuesto mensual o saldo insuficiente
   if (tipo === "egreso") {
+    // Comprobar saldo disponible antes de presupuesto
+    const [[{ saldo }]] = await dbPool.query(
+      `SELECT COALESCE(SUM(CASE WHEN tipo='ingreso' THEN monto ELSE -monto END),0) AS saldo
+       FROM transacciones WHERE usuario_id = ?`,
+      [usuario_id]
+    );
+    if (Number(saldo) < Number(monto)) {
+      // Enviar alerta de fondos insuficientes
+      const [[{ email, nombre }]] = await dbPool.query(
+        "SELECT email, nombre FROM usuarios WHERE id = ?",
+        [usuario_id]
+      );
+      const asunto = "Transacción cancelada: fondos insuficientes";
+      const mensajeNoti = `No tienes saldo suficiente para realizar esta transacción de $${Number(
+        monto
+      ).toFixed(2)}.`;
+      const html = `<p>Hola <strong>${nombre}</strong>,</p><p>${mensajeNoti}</p>`;
+      await enviarEmail(email, asunto, html);
+      // Registrar notificación de saldo insuficiente
+      await dbPool.query(
+        "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'saldo_insuficiente', 0, NOW())",
+        [usuario_id, mensajeNoti]
+      );
+      return res
+        .status(400)
+        .json({ success: false, error: "Fondos insuficientes" });
+    }
     // Obtener mes y año de la transacción
     const fechaObj = new Date(fecha);
     const mes = fechaObj.getMonth() + 1;
@@ -308,6 +335,7 @@ app.post("/transacciones", async (req, res) => {
 
     // Enviar correo de confirmación de transacción
     try {
+      console.log(`→ Enviando correo transacción para usuario ${usuario_id}`);
       const [[{ email, nombre }]] = await dbPool.query(
         "SELECT email, nombre FROM usuarios WHERE id = ?",
         [usuario_id]
@@ -331,9 +359,10 @@ app.post("/transacciones", async (req, res) => {
       } por <strong>$${Number(monto).toFixed(2)}</strong>.</p>
 <p>Saldo actual: <strong>$${saldoCalc.toFixed(2)}</strong></p>`;
       await enviarEmail(email, asunto, html);
-      console.log(`📧 Correo de transacción enviado a ${email}`);
+      console.log(`→ Correo transacción enviado a ${email}`);
       // Guardar notificación en DB (silenciar truncamientos de tipo)
       try {
+        console.log(`→ Guardando notificación DB para usuario ${usuario_id}`);
         const mensaje = `Se registró una ${
           tipo === "ingreso" ? "entrada" : "transacción"
         } de $${Number(monto).toFixed(2)}`;
@@ -341,7 +370,7 @@ app.post("/transacciones", async (req, res) => {
           "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'transaccion', 0, NOW())",
           [usuario_id, mensaje]
         );
-        console.log(`🔔 Notificación registrada para usuario ${usuario_id}`);
+        console.log(`→ Notificación guardada en DB`);
       } catch (notifErr) {
         if (notifErr.code === "WARN_DATA_TRUNCATED") {
           console.warn(
@@ -352,98 +381,97 @@ app.post("/transacciones", async (req, res) => {
           console.error("Error al guardar notificación:", notifErr);
         }
       }
+    } catch (emailErr) {
+      console.error(`✉️ Error al enviar correo transacción:`, emailErr);
+    }
 
-      // Comprobar si se excede el presupuesto
-      try {
-        // Obtener datos de usuario para notificación de presupuesto excedido
-        const [[{ email, nombre }]] = await dbPool.query(
-          "SELECT email, nombre FROM usuarios WHERE id = ?",
-          [usuario_id]
-        );
-        const txDate = new Date(fecha);
-        const txMonth = txDate.getMonth() + 1;
-        const txYear = txDate.getFullYear();
-        // Total gastado en esta categoría para el mes
-        const [[{ spent }]] = await dbPool.query(
-          `SELECT COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN monto ELSE 0 END), 0) AS spent
+    // Comprobar si se excede el presupuesto
+    try {
+      // Obtener datos de usuario para notificación de presupuesto excedido
+      const [[{ email, nombre }]] = await dbPool.query(
+        "SELECT email, nombre FROM usuarios WHERE id = ?",
+        [usuario_id]
+      );
+      const txDate = new Date(fecha);
+      const txMonth = txDate.getMonth() + 1;
+      const txYear = txDate.getFullYear();
+      // Total gastado en esta categoría para el mes
+      const [[{ spent }]] = await dbPool.query(
+        `SELECT COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN monto ELSE 0 END), 0) AS spent
            FROM transacciones
            WHERE usuario_id = ? AND categoria_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?`,
-          [usuario_id, categoria_id, txMonth, txYear]
-        );
-        const gastado = Number(spent);
-        // Obtener último presupuesto para esta categoría/mes/año
-        const [[budgetInfo]] = await dbPool.query(
-          `SELECT p.monto_mensual, c.nombre AS categoria
+        [usuario_id, categoria_id, txMonth, txYear]
+      );
+      const gastado = Number(spent);
+      // Obtener último presupuesto para esta categoría/mes/año
+      const [[budgetInfo]] = await dbPool.query(
+        `SELECT p.monto_mensual, c.nombre AS categoria
            FROM presupuestos p
            JOIN categorias c ON p.categoria_id = c.id
            WHERE p.usuario_id = ? AND p.categoria_id = ? AND p.mes = ? AND p.anio = ?
            ORDER BY p.id DESC LIMIT 1`,
-          [usuario_id, categoria_id, txMonth, txYear]
-        );
-        // Envío de alerta si cercano al límite (>=80% y <100%)
-        if (budgetInfo) {
-          const umbral = 0.8 * Number(budgetInfo.monto_mensual);
-          if (gastado >= umbral && gastado < Number(budgetInfo.monto_mensual)) {
-            const acercMsg = `Has usado ${gastado.toFixed(2)} de $${Number(
-              budgetInfo.monto_mensual
-            ).toFixed(2)} de tu presupuesto para ${
-              budgetInfo.categoria
-            } en ${txMonth}/${txYear}.`;
-            const asuntoAcerc = "Alerta: Presupuesto cercano al límite";
-            const htmlAcerc = `<p>Hola <strong>${nombre}</strong>,</p><p>${acercMsg}</p>`;
-            await enviarEmail(email, asuntoAcerc, htmlAcerc);
-            // Registrar alerta de presupuesto cercano al límite
-            await dbPool.query(
-              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'alerta_pago', 0, NOW())",
-              [usuario_id, acercMsg]
-            );
-            console.log(
-              `🔔 Alerta cercano a presupuesto enviada a usuario ${usuario_id}`
-            );
-          }
+        [usuario_id, categoria_id, txMonth, txYear]
+      );
+      // Envío de alerta si cercano al límite (>=80% y <100%)
+      if (budgetInfo) {
+        const umbral = 0.8 * Number(budgetInfo.monto_mensual);
+        if (gastado >= umbral && gastado < Number(budgetInfo.monto_mensual)) {
+          const acercMsg = `Has usado ${gastado.toFixed(2)} de $${Number(
+            budgetInfo.monto_mensual
+          ).toFixed(2)} de tu presupuesto para ${
+            budgetInfo.categoria
+          } en ${txMonth}/${txYear}.`;
+          const asuntoAcerc = "Alerta: Presupuesto cercano al límite";
+          const htmlAcerc = `<p>Hola <strong>${nombre}</strong>,</p><p>${acercMsg}</p>`;
+          await enviarEmail(email, asuntoAcerc, htmlAcerc);
+          // Registrar alerta de presupuesto cercano al límite
+          await dbPool.query(
+            "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'alerta_pago', 0, NOW())",
+            [usuario_id, acercMsg]
+          );
+          console.log(
+            `🔔 Alerta cercano a presupuesto enviada a usuario ${usuario_id}`
+          );
         }
-        // Si se excede el presupuesto (gastado > límite)
-        if (budgetInfo && Number(spent) > budgetInfo.monto_mensual) {
-          const overMsg = `Has gastado $${gastado.toFixed(
-            2
-          )} de tu presupuesto de $${Number(budgetInfo.monto_mensual).toFixed(
-            2
-          )} para ${budgetInfo.categoria} (${txMonth}/${txYear}).`;
-          const asuntoPres = "Alerta: Presupuesto Excedido";
-          const htmlPres = `<p>Hola <strong>${nombre}</strong>,</p><p>${overMsg}</p>`;
-          await enviarEmail(email, asuntoPres, htmlPres);
-          // Registrar notificación de presupuesto excedido (usar enum correcto)
-          try {
-            await dbPool.query(
-              "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'exceso_presupuesto', 0, NOW())",
-              [usuario_id, overMsg]
-            );
-            console.log(
-              `🔔 Alerta de presupuesto excedido enviada a usuario ${usuario_id}`
-            );
-          } catch (notifErr) {
-            if (notifErr.code === "WARN_DATA_TRUNCATED") {
-              console.warn(
-                "⚠️ Truncamiento al guardar notificación de presupuesto excedido, se omitió:",
-                notifErr.sqlMessage
-              );
-            } else {
-              console.error(
-                "Error al guardar notificación de presupuesto excedido:",
-                notifErr
-              );
-            }
-          }
-        }
-      } catch (overErr) {
-        console.error("Error alerta de presupuesto excedido:", overErr);
       }
-    } catch (e) {
-      console.error("Error enviando email transacción:", e);
+      // Si se excede el presupuesto (gastado > límite)
+      if (budgetInfo && Number(spent) > budgetInfo.monto_mensual) {
+        const overMsg = `Has gastado $${gastado.toFixed(
+          2
+        )} de tu presupuesto de $${Number(budgetInfo.monto_mensual).toFixed(
+          2
+        )} para ${budgetInfo.categoria} (${txMonth}/${txYear}).`;
+        const asuntoPres = "Alerta: Presupuesto Excedido";
+        const htmlPres = `<p>Hola <strong>${nombre}</strong>,</p><p>${overMsg}</p>`;
+        await enviarEmail(email, asuntoPres, htmlPres);
+        // Registrar notificación de presupuesto excedido (usar enum correcto)
+        try {
+          await dbPool.query(
+            "INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio) VALUES (?, ?, 'email', 'exceso_presupuesto', 0, NOW())",
+            [usuario_id, overMsg]
+          );
+          console.log(
+            `🔔 Alerta de presupuesto excedido enviada a usuario ${usuario_id}`
+          );
+        } catch (notifErr) {
+          if (notifErr.code === "WARN_DATA_TRUNCATED") {
+            console.warn(
+              "⚠️ Truncamiento al guardar notificación de presupuesto excedido, se omitió:",
+              notifErr.sqlMessage
+            );
+          } else {
+            console.error(
+              "Error al guardar notificación de presupuesto excedido:",
+              notifErr
+            );
+          }
+        }
+      }
+    } catch (overErr) {
+      console.error("Error alerta de presupuesto excedido:", overErr);
     }
-  } catch (err) {
-    console.error("Error SQL al crear transacción:", err);
-    res.status(500).json({ success: false, error: err });
+  } catch (e) {
+    console.error("Error enviando email transacción:", e);
   }
 });
 
@@ -729,7 +757,7 @@ app.post("/pagos_fijos", async (req, res) => {
         await enviarEmail(user.email, asunto, html);
         await dbPool.query(
           `INSERT INTO notificaciones (usuario_id, mensaje, medio, tipo, leido, fecha_envio)
-           VALUES (?, ?, 'email', 'pago_fijo_creado', 0, NOW())`,
+           VALUES (?, ?, 'email', 'pago_fijo', 0, NOW())`,
           [
             usuario_id,
             `Pago fijo ${nombre} creado por $${Number(monto).toFixed(2)}`,
