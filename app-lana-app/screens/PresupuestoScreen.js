@@ -138,13 +138,14 @@ export default function PresupuestosScreen({ navigation }) {
                 }
                 activeOpacity={0.8}
               >
-                <CategoryIcon
-                  categoria={p.categoria}
-                  size={32}
-                  color="#1976d2"
-                  style={{ marginRight: 10 }}
-                />
-                <View style={{ flex: 1 }}>
+                <View style={styles.iconWrapper}>
+                  <CategoryIcon
+                    categoria={p.categoria}
+                    size={24}
+                    color="#1976d2"
+                  />
+                </View>
+                <View style={styles.cardContent}>
                   <Text style={styles.nombre}>{p.categoria}</Text>
                   <Text style={styles.monto}>
                     <Text style={{ color: "#1976d2" }}>
@@ -239,6 +240,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e3f2fd",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
   nombre: { fontSize: 20, fontFamily: "serif", color: "#222", marginBottom: 2 },
   monto: { fontSize: 16, fontFamily: "serif", marginBottom: 2 },
   gastado: { fontSize: 16, fontFamily: "serif", marginBottom: 6 },
@@ -263,6 +277,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "center",
     marginVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   buttonText: { color: "#222", fontSize: 22, fontFamily: "serif" },
   badge: {

@@ -9,6 +9,8 @@ const iconMap = {
   Salud: { component: FontAwesome5, name: "heartbeat" },
   Entretenimiento: { component: MaterialIcons, name: "movie" },
   Hogar: { component: MaterialIcons, name: "home" },
+  Servicios: { component: MaterialIcons, name: "build" },
+  Sueldo: { component: MaterialIcons, name: "attach-money" },
 };
 
 export default function CategoryIcon({ categoria, size = 24, color = "#222" }) {

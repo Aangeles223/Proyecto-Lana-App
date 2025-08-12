@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import CategoryIcon from "../components/CategoryIcon";
 import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
@@ -96,8 +97,18 @@ export default function AgregarPagoFijoScreen({ navigation }) {
         <Text style={styles.title}>Agregar Pago Fijo</Text>
         {/* Picker de servicio */}
         <Text style={styles.label}>Servicio</Text>
-        <View style={styles.pickerWrapper}>
-          <Picker selectedValue={servicio} onValueChange={setServicio}>
+        <View style={[styles.pickerWrapper, styles.pickerRow]}>
+          <Ionicons
+            name="ios-cog"
+            size={24}
+            color="#1976d2"
+            style={styles.iconPicker}
+          />
+          <Picker
+            selectedValue={servicio}
+            onValueChange={setServicio}
+            style={styles.picker}
+          >
             {servicios.map((s) => (
               <Picker.Item key={s.id} label={s.nombre} value={s.id} />
             ))}
@@ -105,8 +116,18 @@ export default function AgregarPagoFijoScreen({ navigation }) {
         </View>
         {/* Picker de categoría */}
         <Text style={styles.label}>Categoría</Text>
-        <View style={styles.pickerWrapper}>
-          <Picker selectedValue={categoria} onValueChange={setCategoria}>
+        <View style={[styles.pickerWrapper, styles.pickerRow]}>
+          <CategoryIcon
+            categoria={categorias.find((c) => c.id === categoria)?.nombre || ""}
+            size={24}
+            color="#1976d2"
+            style={styles.iconPicker}
+          />
+          <Picker
+            selectedValue={categoria}
+            onValueChange={setCategoria}
+            style={styles.picker}
+          >
             {categorias.map((c) => (
               <Picker.Item key={c.id} label={c.nombre} value={c.id} />
             ))}

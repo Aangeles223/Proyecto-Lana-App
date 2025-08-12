@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import LogoLana from "../components/LogoLana";
+import CategoryIcon from "../components/CategoryIcon";
 import * as Notifications from "expo-notifications";
 
 // Determinar base URL según Expo debuggerHost o IP de la máquina (LAN)
@@ -113,14 +115,36 @@ export default function EditarPresupuestoScreen({ route, navigation }) {
       style={styles.background}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* Header con flecha de regreso y logo */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#222" />
+        </TouchableOpacity>
+        <View style={styles.logoHeader}>
+          <LogoLana />
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingBottom: 40,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.centerContent}>
-          <Text style={styles.title}>Editar presupuesto</Text>
+          {/* <Text style={styles.title}>Editar presupuesto</Text> */}
+          <Text style={styles.formTitle}>Editar Presupuesto</Text>
           <Text style={styles.label}>Categoría</Text>
-          <Text style={styles.categoriaText}>{presupuesto.categoria}</Text>
+          <View style={styles.categoryRow}>
+            <CategoryIcon
+              categoria={presupuesto.categoria}
+              size={20}
+              color="#1976d2"
+            />
+            <Text style={styles.categoriaText}>{presupuesto.categoria}</Text>
+          </View>
           <Text style={styles.label}>Monto</Text>
           <TextInput
             style={styles.input}
@@ -153,19 +177,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#faf7f7",
     paddingTop: 30,
   },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
+  headerRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: -40,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
-  title: {
-    fontSize: 32,
+  logoHeader: {
+    flex: 1,
+    alignItems: "center",
+  },
+  centerContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  formTitle: {
+    fontSize: 24,
     color: "#222",
-    fontFamily: "serif",
-    textAlign: "center",
-    fontWeight: "bold",
-    marginBottom: 30,
+    fontWeight: "600",
+    alignSelf: "center",
+    marginBottom: 16,
   },
   label: {
     fontSize: 18,
@@ -176,13 +223,16 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginLeft: 10,
   },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   categoriaText: {
-    fontSize: 20,
+    fontSize: 18,
     color: "#1976d2",
-    fontFamily: "serif",
-    marginBottom: 10,
-    alignSelf: "flex-start",
-    marginLeft: 10,
+    fontWeight: "500",
+    marginLeft: 8,
   },
   input: {
     fontSize: 22,
@@ -199,12 +249,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   button: {
-    backgroundColor: "#54bcd4",
+    backgroundColor: "#1976d2",
     borderRadius: 12,
-    paddingVertical: 16,
-    width: 320,
+    paddingVertical: 14,
+    width: "100%",
     alignItems: "center",
-    marginTop: 30,
+    marginTop: 16,
   },
   buttonText: { color: "#222", fontSize: 22, fontFamily: "serif" },
 });

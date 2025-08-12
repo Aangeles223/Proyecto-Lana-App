@@ -191,6 +191,18 @@ async function resetPagosMensual() {
   }
 }
 
+cron.schedule("0 8 * * *", () => {
+  console.log("⏰ Revisando pagos fijos:", new Date());
+  revisarAlertas();
+});
+cron.schedule("5 0 1 * *", () => {
+  console.log("⏳ Reiniciando estado de pagos:", new Date());
+  resetPagosMensual();
+});
+cron.schedule("5 0 1 * *", () => {
+  console.log("⏳ Reiniciando estado de pagos:", new Date());
+  resetPagosMensual();
+});
 // Cron: diario a las 8 AM
 cron.schedule("0 8 * * *", () => {
   console.log("⏰ Revisando pagos fijos:", new Date());
@@ -201,17 +213,5 @@ cron.schedule("5 0 1 * *", () => {
   console.log("⏳ Reiniciando estado de pagos:", new Date());
   resetPagosMensual();
 });
-// Primera ejecución
-revisarAlertas();
-
 // Exportar función de envío de correo
 module.exports = { enviarEmail };
-
-// CRON mensual el día 1 a las 00:05 para reiniciar pagos
-cron.schedule("5 0 1 * *", () => {
-  console.log("⏳ Reiniciando estado de pagos:", new Date());
-  resetPagosMensual();
-});
-
-// Para pruebas manuales
-revisarAlertas();

@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "jwt-decode": "^4.0.0"
+    "d3-shape": "^3.2.0",
+    "jwt-decode": "^4.0.0",
+    "react-native-svg-charts": "^5.4.0"
   }
 }

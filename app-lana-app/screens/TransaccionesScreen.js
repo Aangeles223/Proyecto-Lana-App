@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import CategoryIcon from "../components/CategoryIcon";
 
 // Detección automática de host para la API
 const manifest = Constants.manifest || {};
@@ -160,12 +161,11 @@ export default function TransaccionesScreen({ navigation }) {
                 <View
                   style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}
                 >
-                  {(() => {
-                    const map =
-                      categoryIconMap[t.categoria] || categoryIconMap.Default;
-                    const Icon = map.component;
-                    return <Icon name={map.name} size={24} color="#222" />;
-                  })()}
+                  <CategoryIcon
+                    categoria={t.categoria}
+                    size={24}
+                    color="#222"
+                  />
                 </View>
                 <View style={styles.info}>
                   <Text style={styles.category}>

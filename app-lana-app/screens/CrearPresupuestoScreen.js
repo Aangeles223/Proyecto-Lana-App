@@ -10,18 +10,19 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { Picker } from "@react-native-picker/picker"; // no usado, pendiente de remover
+import CategoryIcon from "../components/CategoryIcon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoLana from "../components/LogoLana";
 import Constants from "expo-constants";
+import { Ionicons } from "@expo/vector-icons";
 
-// Determina host según Expo debuggerHost o IP fija
+// Determina host mediante Expo debuggerHost o IP LAN del equipo
 const manifest = Constants.manifest || {};
-// Obtener host del packager o usar fallback: Android emulator: 10.0.2.2, iOS: localhost
 const debuggerHost = manifest.debuggerHost?.split(":")[0];
-const defaultHost = Platform.OS === "android" ? "10.0.2.2" : "localhost";
-const host = debuggerHost || defaultHost;
-const BASE_URL = `http://${host}:3000`;
+// fallback a IP LAN para acceder desde dispositivo/emulador en red
+const devHost = debuggerHost || "10.0.0.11";
+const BASE_URL = `http://${devHost}:3000`;
 
 export default function CrearPresupuestoScreen({ navigation }) {
   const [monto, setMonto] = useState("");
@@ -94,28 +95,54 @@ export default function CrearPresupuestoScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={60}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.logoContainer}>
+      {/* Header fijo con flecha de regreso y logo */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#222" />
+        </TouchableOpacity>
+        <View style={styles.logoHeader}>
           <LogoLana />
         </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-start", paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.centerContent}>
           <Text style={styles.title}>Crear presupuesto</Text>
-          {/* Picker de Categoría */}
+          {/* Selector de Categoría con iconos */}
           <Text style={styles.label}>Categoría</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={categoria}
-              style={styles.picker}
-              onValueChange={(itemValue) => setCategoria(itemValue)}
-            >
-              {categorias.map((cat) => (
-                <Picker.Item key={cat.id} label={cat.nombre} value={cat.id} />
-              ))}
-            </Picker>
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScroll}
+          >
+            {categorias.map((cat) => (
+              <TouchableOpacity
+                key={cat.id}
+                style={[
+                  styles.categoryChip,
+                  categoria === cat.id && styles.categoryChipActive,
+                ]}
+                onPress={() => setCategoria(cat.id)}
+              >
+                <CategoryIcon
+                  categoria={cat.nombre}
+                  size={20}
+                  color={categoria === cat.id ? '#fff' : '#1976d2'}
+                />
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    categoria === cat.id && styles.categoryChipTextActive,
+                  ]}
+                >
+                  {cat.nombre}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           {/* Monto */}
           <Text style={styles.label}>Monto</Text>
           <TextInput
@@ -126,18 +153,28 @@ export default function CrearPresupuestoScreen({ navigation }) {
             placeholderTextColor="#bdbdbd"
             keyboardType="numeric"
           />
-          {/* Periodo */}
+          {/* Selector de Periodo segmentado */}
           <Text style={styles.label}>Periodo</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={periodo}
-              style={styles.picker}
-              onValueChange={(itemValue) => setPeriodo(itemValue)}
-            >
-              <Picker.Item label="Mensual" value="mensual" />
-              <Picker.Item label="Quincenal" value="quincenal" />
-              <Picker.Item label="Semanal" value="semanal" />
-            </Picker>
+          <View style={styles.periodRow}>
+            {['mensual','quincenal','semanal'].map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.periodBtn,
+                  periodo === item && styles.periodBtnActive,
+                ]}
+                onPress={() => setPeriodo(item)}
+              >
+                <Text
+                  style={[
+                    styles.periodText,
+                    periodo === item && styles.periodTextActive,
+                  ]}
+                >
+                  {item.charAt(0).toUpperCase() + item.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
           {/* Botón Agregar */}
           <TouchableOpacity style={styles.button} onPress={handleAgregar}>
@@ -159,19 +196,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  centerContent: {
+  logoHeader: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    marginTop: -20,
+    justifyContent: "center",
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+     centerContent: {
+       flex: 1,
+       backgroundColor: '#ffffff',
+       borderRadius: 16,
+       padding: 16,
+       marginHorizontal: 16,
+       // llenar espacio vertical
+       elevation: 2,
+       shadowColor: '#000',
+       shadowOpacity: 0.1,
+       shadowOffset: { width: 0, height: 2 },
+       shadowRadius: 4,
+     },
   title: {
-    fontSize: 28,
-    color: "#222",
-    fontFamily: "serif",
-    textAlign: "center",
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: 22,
+    color: '#222',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   label: {
     fontSize: 18,
@@ -182,42 +238,75 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginLeft: 10,
   },
-  pickerContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#1976d2",
-    marginBottom: 10,
-    width: 320,
-    alignSelf: "center",
+  categoriesScroll: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
   },
-  picker: {
-    width: "100%",
-    color: "#222",
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f7f8fa',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginRight: 6,
+  },
+  categoryChipActive: {
+    backgroundColor: '#1976d2',
+  },
+  categoryChipText: {
+    marginLeft: 8,
+    color: '#1976d2',
     fontSize: 16,
-    backgroundColor: "#fff",
+    fontWeight: '600',
+  },
+  categoryChipTextActive: {
+    color: '#fff',
   },
   input: {
-    fontSize: 22,
-    color: "#222",
-    fontFamily: "serif",
-    textAlign: "left",
+    width: '100%',
     borderWidth: 1,
-    borderColor: "#222",
-    borderRadius: 12,
-    width: 320,
-    marginBottom: 18,
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    borderColor: '#ccc',
+    backgroundColor: '#faf9f9',
+    borderRadius: 8,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginVertical: 6,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 8,
+    width: '100%',
+  },
+  periodBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    marginHorizontal: 6,
+  },
+  periodBtnActive: {
+    backgroundColor: '#1976d2',
+  },
+  periodText: {
+    color: '#1976d2',
+    fontSize: 16,
+  },
+  periodTextActive: {
+    color: '#fff',
+    fontWeight: '600',
   },
   button: {
-    backgroundColor: "#54bcd4",
+    backgroundColor: '#1976d2',
     borderRadius: 12,
-    paddingVertical: 16,
-    width: 320,
-    alignItems: "center",
-    marginTop: 30,
+    paddingVertical: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 12,
   },
-  buttonText: { color: "#222", fontSize: 22, fontFamily: "serif" },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

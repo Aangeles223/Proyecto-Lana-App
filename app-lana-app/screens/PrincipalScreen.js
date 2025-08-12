@@ -16,6 +16,7 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import CategoryIcon from "../components/CategoryIcon";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 // Determinar host y base URL para API proxy: leer debuggerHost y si es localhost usar fallback emulador/LAN
@@ -199,7 +200,11 @@ export default function PrincipalScreen({ navigation }) {
                 <View
                   style={[styles.transIcon, { backgroundColor: "#b2f0e6" }]}
                 >
-                  <MaterialIcons name="restaurant" size={24} color="#222" />
+                  <CategoryIcon
+                    categoria={t.categoria}
+                    size={24}
+                    color="#222"
+                  />
                 </View>
                 <View style={styles.transInfo}>
                   <Text style={styles.transTitle}>
@@ -251,7 +256,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 22,
     color: "#222",
-    fontWeight: "700",
   },
   bellContainer: {
     position: "relative",

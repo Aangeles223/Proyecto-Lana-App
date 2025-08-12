@@ -158,7 +158,7 @@ export default function AgregarTransaccionScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#faf7f7" }}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -306,6 +306,11 @@ export default function AgregarTransaccionScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // Contenedor principal con fondo suave
+  container: {
+    flex: 1,
+    backgroundColor: "#f0f4f8",
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -321,20 +326,17 @@ const styles = StyleSheet.create({
   },
   centerContent: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginVertical: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 24,
+    margin: 16,
     alignItems: "center",
     justifyContent: "flex-start",
-    // Shadow Android
-    elevation: 3,
-    // Shadow iOS
+    elevation: 4,
     shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   title: {
     fontSize: 28,
@@ -345,18 +347,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   input: {
-    fontSize: 28,
+    fontSize: 24,
     color: "#222",
-    fontFamily: "serif",
     textAlign: "center",
-    borderWidth: 1,
-    borderColor: "#1976d2",
-    borderRadius: 10,
-    width: 240,
-    marginBottom: 18,
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    borderWidth: 0,
+    backgroundColor: "#f5f7fa",
+    borderRadius: 12,
+    width: "80%",
+    marginVertical: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
   },
   tipoRow: {
     flexDirection: "row",
@@ -368,19 +372,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     marginHorizontal: 8,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#1976d2",
     alignItems: "center",
-    backgroundColor: "#fff",
+    justifyContent: "center",
   },
   tipoBtnActivo: {
     backgroundColor: "#1976d2",
   },
   tipoBtnText: {
     color: "#1976d2",
-    fontWeight: "bold",
     fontSize: 16,
+    fontWeight: "600",
   },
   tipoBtnTextActivo: {
     color: "#fff",
@@ -391,16 +395,16 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   categoryBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 8,
-    backgroundColor: "#e6f7fa",
-    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginRight: 12,
+    borderRadius: 12,
+    backgroundColor: "#eef5f9",
     alignItems: "center",
+    justifyContent: "center",
   },
   categoryBtnActive: {
-    backgroundColor: "#43a047",
+    backgroundColor: "#1976d2",
   },
   categoryText: {
     color: "#222",
@@ -417,14 +421,12 @@ const styles = StyleSheet.create({
   selectRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 10,
+    backgroundColor: "#f5f7fa",
+    borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     marginVertical: 8,
-    width: 260,
-    borderWidth: 1,
-    borderColor: "#1976d2",
+    width: "80%",
   },
   selectText: {
     fontSize: 18,
@@ -433,30 +435,32 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   descripcion: {
-    width: 260,
-    height: 40,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#eee",
+    width: "80%",
+    minHeight: 60,
+    backgroundColor: "#f5f7fa",
+    borderRadius: 12,
     marginTop: 18,
     marginBottom: 20,
-    paddingHorizontal: 12,
+    padding: 12,
     fontSize: 16,
     color: "#222",
-    fontFamily: "serif",
+    textAlignVertical: "top",
   },
   button: {
-    backgroundColor: "#185a9d",
-    borderRadius: 10,
-    paddingVertical: 14,
-    width: 220,
+    backgroundColor: "#1976d2",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 24,
     marginBottom: 30,
     elevation: 2,
   },
-  buttonText: { color: "#fff", fontSize: 20, fontFamily: "serif" },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
   bellContainer: { position: "relative", padding: 8 },
   badge: {
     position: "absolute",
